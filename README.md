@@ -35,8 +35,8 @@ Three things make it more than a rotation loop:
    countdown.
 4. **The composer shows what is running.** A compact capsule sits in the
    composer row, right in front of the model selector, with two bars — the
-   5-hour and the weekly window of the key in use. Hover it to see which key
-   is running, both remaining shares, and when each window resets.
+   5-hour and the weekly window of the key in use. Hover it to see every key
+   of the pool, both remaining shares, and when each window resets.
 
 ## Why this exists
 
@@ -53,7 +53,7 @@ removes:
 | Who owns the route's key | the Models page | the plugin takes it over as soon as it loads |
 | Picking the key yourself | not possible | a per-key button pins the key the provider starts with |
 | Remaining quota | not shown | queried per key, for the 5-hour window and the weekly one |
-| In the composer | not shown | a capsule in front of the model selector shows the key in use, both windows, and both countdowns |
+| In the composer | not shown | a capsule in front of the model selector; hovering it lists every key of the pool with both windows and both countdowns |
 | Switching | on failure only | on failure, and the next key is picked by reset order |
 | MiniMax Token Plan | an HTTP 402 arrives as `PI_AI_ERROR` and rotates on nothing | a spent plan is recognized and rotates |
 
@@ -175,12 +175,23 @@ small capsule with two bars:
 The bars are colored by the remaining share: green while it is healthy, amber
 under 20%, red at zero.
 
-Hover the capsule to open a panel. It shows the key the route is
-authenticating with, its two remaining shares, and the countdown to each
-window's reset. Below that, the rest of the pool is listed compactly with
-each key's weekly share. Moving the pointer away closes the panel, and
-**Escape** closes it too. Clicking the capsule forces a fresh probe instead
-of waiting for the next poll.
+Hover the capsule to open a panel. It lists **every key of the pool**, one row
+per key, with two lines per row:
+
+```
+primary   5h  ▓▓▓▓▓▓░░░░  80% 2h13m
+          7d  ▓▓▓▓░░░░░░░  39% 2d22h
+```
+
+Each line is the window's label, its remaining share as a bar and a
+percentage, and the time left before the window resets. The key the route is
+authenticating with is highlighted. The panel is deliberately terse — numbers
+rather than sentences — because it floats over the composer and holds a whole
+pool.
+
+Moving the pointer away closes the panel, and **Escape** closes it too.
+Clicking the capsule forces a fresh probe of every key instead of waiting for
+the next poll, and the panel shows the new figures when they arrive.
 
 The capsule is a normal item in the composer row: the row lays it out, so
 the input's layout is the Host's business and nothing is measured or

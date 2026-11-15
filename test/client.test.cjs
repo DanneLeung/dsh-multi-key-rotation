@@ -19,6 +19,8 @@
 
 const test = require('node:test')
 const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
 const { loadClient, createSnapshotStore, composeProps, calls, renderTree, stubFetch } = require('./client-harness.cjs')
 
 /**
@@ -36,10 +38,12 @@ test.afterEach(() => {
 
 /**
  * Load the client module and apply it to the mock context.
+ * @param options - passed to the harness; `pollMs` shortens the indicator's
+ *   poll interval so a test can drive the background read.
  * @returns the harness pieces.
  */
-function boot() {
-  const harness = loadClient()
+function boot(options = {}) {
+  const harness = loadClient(options)
   mounted.add(harness)
   harness.sandbox.__result.apply(harness.ctx)
   return harness
@@ -723,6 +727,29 @@ async function renderIndicator(harness, sessionId, open) {
   return tree
 }
 
+/**
+ * Render the composer indicator once, without waiting for the network.
+ *
+ * `renderIndicator` lets the answer land before it returns, which is what
+ * a test usually wants. A test that watches the transition — the busy
+ * flag going up and coming back down — needs the render that happens in
+ * between, so it uses this one.
+ * @param harness - the booted harness.
+ * @returns the rendered element tree.
+ */
+function renderIndicatorNow(harness) {
+  const entry = indicatorEntry(harness)
+  const face = entry.options.inject('session-1')
+  const t = (key, params) => {
+    if (params === undefined) return key
+    return key.replace(/\{(\w+)\}/g, (m, name) => (name in params ? String(params[name]) : m))
+  }
+  const tree = renderTree(harness.react, entry.component, { ...face, t })
+  const host = byClass(tree, 'm_pool_indicatorHost')[0]
+  if (host !== undefined) host.props.onMouseEnter()
+  return renderTree(harness.react, entry.component, { ...face, t })
+}
+
 /** A profile with one pooled provider and two named keys. */
 function pooledProfile() {
   return {
@@ -852,12 +879,13 @@ test('the indicator stays hidden for a provider the plugin does not pool', async
   }
 })
 
-test('the indicator shows the key in use and both windows', async () => {
-  // The Host answers with the key the route authenticates with, and the two
-  // windows of that key.
-  const restore = stubFetch()
-  calls.profile = pooledProfile()
-  const now = Date.now()
+test('the indicator gives every key two bars with its reset countdown', async () => {
+  // Every key of the pool gets the same two lines: the 5-hour window and
+  // the weekly one, each with its own bar, its own share, and its own
+  // countdown. The key in use is marked by its colour alone.
+  const restore = stubFetch();
+  calls.profile = pooledProfile();
+  const now = Date.now();
   calls.health = {
     provider: 'minimax-cn',
     keys: [
@@ -888,35 +916,429 @@ test('the indicator shows the key in use and both windows', async () => {
     ],
   }
   try {
-    const harness = boot()
-    harness.openIndicator = true
-    await settle()
-    await settle()
-    const tree = await renderIndicator(harness)
-    assert.notEqual(tree, null)
-    // The key in use is the one in the main block, marked as active.
-    const active = byClass(tree, 'm_pool_indicatorKeyActive')
-    assert.equal(active.length, 1)
-    const name = byClass(tree, 'm_pool_indicatorKeyName').map((node) => texts(node).join(''))
-    assert.deepEqual(name, ['secondary'])
-    // The rest of the pool is listed compactly beside it.
-    const pool = byClass(tree, 'm_pool_indicatorPoolName').map((node) => texts(node).join(''))
-    assert.deepEqual(pool, ['primary', 'secondary'])
-    // Both windows are reported for the key in use.
-    const metrics = byClass(tree, 'm_pool_indicatorMetric')
-    const shown = metrics.map((node) => texts(node).join(' ')).join('\n')
-    assert.match(shown, /indicatorWindowInterval/)
-    assert.match(shown, /indicatorWindowWeekly/)
-    assert.match(shown, /88%/)
-    assert.match(shown, /55%/)
-    // The reset countdown is rendered for both windows.
-    assert.match(shown, /indicatorResetsIn/)
+    const harness = boot();
+    harness.openIndicator = true;
+    await settle();
+    await settle();
+    const tree = await renderIndicator(harness);
+    assert.notEqual(tree, null);
+
+    // Both keys are listed, and the key in use is the marked one.
+    const rows = byClass(tree, 'm_pool_indicatorPoolRow');
+    assert.equal(rows.length, 2);
+    const active = byClass(tree, 'm_pool_indicatorPoolRowActive');
+    assert.equal(active.length, 1);
+    const names = byClass(tree, 'm_pool_indicatorPoolName').map((node) => texts(node).join(''));
+    assert.deepEqual(names, ['primary', 'secondary']);
+
+    // Two windows per key: four in all.
+    const windows = byClass(tree, 'm_pool_indicatorWindow');
+    assert.equal(windows.length, 4);
+    // Every window carries its label, its bar, its share, and its countdown.
+    const shown = windows.map((node) => texts(node).join(' ')).join('\n');
+    assert.match(shown, /indicatorWindowInterval/);
+    assert.match(shown, /indicatorWindowWeekly/);
+    assert.match(shown, /93%/);
+    assert.match(shown, /88%/);
+    assert.match(shown, /41%/);
+    assert.match(shown, /55%/);
+    // The countdown is terse: "2h59m", "2d23h" — no prose around it.
+    assert.match(shown, /\d+h\d*m/);
+    assert.match(shown, /\d+d\d+h/);
+    // And it is the short form, not the page's verbose one.
+    assert.doesNotMatch(shown, /durationHours|durationDays|durationMinutes/);
   } finally {
-    calls.health = { keys: [] }
-    calls.profile = { providers: {} }
-    restore()
+    calls.health = { keys: [] };
+    calls.profile = { providers: {} };
+    restore();
   }
-})
+});
+
+test('the indicator bar width follows the reported share', async () => {
+  // The bar is the number: its width has to be the share the Host sent.
+  const restore = stubFetch();
+  calls.profile = pooledProfile();
+  calls.health = {
+    provider: 'minimax-cn',
+    keys: [
+      {
+        name: 'primary',
+        ref: 'MINIMAX_CN_API_KEY_POOL_1',
+        enabled: true,
+        configured: true,
+        current: true,
+        quotaOk: true,
+        intervalRemainingPercent: 80,
+        weeklyRemainingPercent: 39,
+      },
+    ],
+  }
+  try {
+    const harness = boot();
+    harness.openIndicator = true;
+    await settle();
+    await settle();
+    const tree = await renderIndicator(harness);
+    // The panel's own bars, not the capsule's: the capsule uses the same
+    // fill class, so the search is scoped to the panel.
+    const panel = byClass(tree, 'm_pool_indicatorTip')[0];
+    assert.notEqual(panel, undefined);
+    const fills = byClass(panel, 'm_pool_indicatorWindowFill');
+    assert.equal(fills.length, 2);
+    const widths = fills.map((node) => node.props.style?.width);
+    assert.deepEqual(widths, ['80%', '39%']);
+  } finally {
+    calls.health = { keys: [] };
+    calls.profile = { providers: {} };
+    restore();
+  }
+});
+
+test('the indicator shows no prose, only the numbers', async () => {
+  // The panel sits over the composer and holds a whole pool, so it carries
+  // numbers, not sentences. The labels are the two window names and
+  // nothing else.
+  const restore = stubFetch();
+  calls.profile = pooledProfile();
+  calls.health = {
+    provider: 'minimax-cn',
+    keys: [
+      {
+        name: 'primary',
+        ref: 'MINIMAX_CN_API_KEY_POOL_1',
+        enabled: true,
+        configured: true,
+        current: true,
+        quotaOk: true,
+        intervalRemainingPercent: 80,
+        intervalResetAt: Date.now() + 2 * 3_600_000 + 13 * 60_000,
+        weeklyRemainingPercent: 39,
+        weeklyResetAt: Date.now() + 2 * 86_400_000 + 22 * 3_600_000,
+      },
+    ],
+  }
+  try {
+    const harness = boot();
+    harness.openIndicator = true;
+    await settle();
+    await settle();
+    const tree = await renderIndicator(harness);
+    const shown = texts(tree).join(' ');
+    // The two window labels, the share, and the countdown.
+    assert.match(shown, /5h/);
+    assert.match(shown, /7d/);
+    assert.match(shown, /80%/);
+    assert.match(shown, /39%/);
+    // The countdown is terse: hours and days, with the minutes folded in.
+    // The exact minutes depend on how long the test took, so the shape is
+    // what is checked.
+    assert.match(shown, /2h\d+m/);
+    assert.match(shown, /2d\d+h/);
+    // None of the sentences the panel used to carry.
+    assert.doesNotMatch(shown, /正在使用|五小时窗口|周窗口|还剩/);
+    assert.doesNotMatch(shown, /resets in|Key in use|5-hour window|Weekly window/);
+  } finally {
+    calls.health = { keys: [] };
+    calls.profile = { providers: {} };
+    restore();
+  }
+});
+
+test('the panel dictionary carries no prose in either language', () => {
+  // The panel's own labels are the two window names, and nothing else.
+  // The dictionary is read straight out of the bundle, because the panel
+  // shows the dictionary's text, not its keys.
+  const source = fs.readFileSync(path.join(__dirname, '..', 'client.js'), 'utf8');
+  for (const language of ['en', 'zh']) {
+    const block = /const (en|zh) = \{([\s\S]*?)\n    \};/.exec(source);
+    assert.notEqual(block, undefined, 'the bundle carries a dictionary');
+    const body = block[2];
+    // The window labels are the short forms.
+    assert.match(body, /indicatorWindowInterval: '5h'/);
+    assert.match(body, /indicatorWindowWeekly: '7d'/);
+    // The sentences the panel used to carry are gone.
+    assert.doesNotMatch(body, /indicatorWindowInterval: '五小时窗口'/);
+    assert.doesNotMatch(body, /indicatorWindowWeekly: '周窗口'/);
+    assert.doesNotMatch(body, /indicatorWindowInterval: '5-hour window'/);
+    assert.doesNotMatch(body, /indicatorWindowWeekly: 'Weekly window'/);
+    assert.doesNotMatch(body, /indicatorResetsIn/);
+  }
+});
+
+test('clicking the indicator asks the Host to probe the keys again', async () => {
+  // The click is a forced read: the Host re-probes every key of the pool
+  // instead of answering from its cache, so the panel shows fresh figures.
+  const restore = stubFetch();
+  calls.profile = pooledProfile();
+  calls.health = {
+    provider: 'minimax-cn',
+    keys: [
+      {
+        name: 'primary',
+        ref: 'MINIMAX_CN_API_KEY_POOL_1',
+        enabled: true,
+        configured: true,
+        current: true,
+        quotaOk: true,
+        intervalRemainingPercent: 80,
+        weeklyRemainingPercent: 39,
+      },
+    ],
+  }
+  try {
+    // The fetch log is shared by every test and by the settings page, so it
+    // starts empty here and the indicator's own reads are told apart by
+    // their count.
+    calls.fetches.length = 0;
+    const harness = boot();
+    harness.openIndicator = true;
+    await settle();
+    await settle();
+    let tree = await renderIndicator(harness);
+
+    // The indicator's first read is the background one: no refresh flag.
+    // The settings page asks the same route about the same provider, so the
+    // indicator's reads are the ones that carry the indicator's own marker.
+    const before = calls.fetches.filter((url) => url.includes('provider=minimax-cn')).length;
+    assert.ok(before >= 1, 'the indicator read the pool health');
+    assert.equal(
+      calls.fetches.filter((url) => url.includes('provider=minimax-cn') && url.includes('refresh=1')).length,
+      0,
+      'the background read does not force a probe',
+    );
+
+    // The Host now answers with fresher figures.
+    calls.health = {
+      provider: 'minimax-cn',
+      keys: [
+        {
+          name: 'primary',
+          ref: 'MINIMAX_CN_API_KEY_POOL_1',
+          enabled: true,
+          configured: true,
+          current: true,
+          quotaOk: true,
+          intervalRemainingPercent: 12,
+          weeklyRemainingPercent: 5,
+        },
+      ],
+    };
+
+    // The click forces a fresh probe.
+    const trigger = byClass(tree, 'm_pool_indicatorTrigger')[0];
+    trigger.props.onClick();
+    await settle();
+    await settle();
+    tree = await renderIndicator(harness);
+
+    // The forced read went out with the refresh flag.
+    const forced = calls.fetches.filter((url) => url.includes('provider=minimax-cn') && url.includes('refresh=1'));
+    assert.equal(forced.length, 1, 'the click forced exactly one fresh probe');
+
+    // And the panel shows the fresh figures, not the old ones.
+    const shown = texts(tree).join(' ');
+    assert.match(shown, /12%/);
+    assert.match(shown, /5%/);
+    assert.doesNotMatch(shown, /80%/);
+    assert.doesNotMatch(shown, /39%/);
+  } finally {
+    calls.health = { keys: [] };
+    calls.profile = { providers: {} };
+    restore();
+  }
+});
+
+test('a poll that lands after a click does not undo the click', async () => {
+  // The background poll and the click can overlap. When the poll's answer
+  // lands last, the panel must still show the fresh figures: the click
+  // asked the Host to probe the keys again, and the poll only carries the
+  // cached ones.
+  const restore = stubFetch();
+  calls.profile = pooledProfile();
+  calls.health = {
+    provider: 'minimax-cn',
+    keys: [
+      {
+        name: 'primary',
+        ref: 'MINIMAX_CN_API_KEY_POOL_1',
+        enabled: true,
+        configured: true,
+        current: true,
+        quotaOk: true,
+        intervalRemainingPercent: 80,
+        weeklyRemainingPercent: 39,
+      },
+    ],
+  };
+  try {
+    calls.defer = true;
+    calls.pending.length = 0;
+    // The poll is shortened so the indicator's OWN background read can be
+    // made to land after the click's forced read.
+    const harness = boot({ pollMs: 20 });
+    harness.openIndicator = true;
+    await settle();
+    await settle();
+
+    // The indicator's read is waiting, alongside the settings page's own
+    // read of the same route. The held answers are told apart by their URL.
+    const held = () => calls.pending.filter((entry) => entry.url.includes('provider=minimax-cn'));
+
+    // Render first: that is what starts the indicator's read.
+    let tree = await renderIndicator(harness);
+    assert.ok(held().length >= 1, 'a read is in flight');
+
+    // Let every held read land, and let the panel pick them up.
+    for (const entry of held()) entry.resolve();
+    calls.pending.length = 0;
+    await settle();
+    await settle();
+    tree = await renderIndicator(harness);
+    assert.match(texts(tree).join(' '), /80%/);
+
+    // The Host now answers with fresher figures.
+    calls.health = {
+      provider: 'minimax-cn',
+      keys: [
+        {
+          name: 'primary',
+          ref: 'MINIMAX_CN_API_KEY_POOL_1',
+          enabled: true,
+          configured: true,
+          current: true,
+          quotaOk: true,
+          intervalRemainingPercent: 12,
+          weeklyRemainingPercent: 5,
+        },
+      ],
+    };
+
+    // The click starts a forced read. It captures the fresh figures.
+    const trigger = byClass(tree, 'm_pool_indicatorTrigger')[0];
+    trigger.props.onClick();
+    await settle();
+    const waiting = held();
+    const forced = waiting.find((entry) => entry.url.includes('refresh=1'));
+    assert.notEqual(forced, undefined, 'the click forced a read');
+
+    // The forced answer lands.
+    forced.resolve();
+    calls.pending.length = 0;
+    await settle();
+    await settle();
+    tree = await renderIndicator(harness);
+    assert.match(texts(tree).join(' '), /12%/);
+
+    // Now let the indicator's own poll fire. The Host's cached figures are
+    // still the old ones — the click asked the Host to probe the keys, but
+    // the cache behind a plain read is unchanged — so the poll carries the
+    // OLD figures and lands after the forced answer. It must not undo the
+    // click.
+    calls.health = {
+      provider: 'minimax-cn',
+      keys: [
+        {
+          name: 'primary',
+          ref: 'MINIMAX_CN_API_KEY_POOL_1',
+          enabled: true,
+          configured: true,
+          current: true,
+          quotaOk: true,
+          intervalRemainingPercent: 80,
+          weeklyRemainingPercent: 39,
+        },
+      ],
+    };
+    await settle();
+    await settle();
+    const late = held().filter((entry) => !entry.url.includes('refresh=1'));
+    assert.ok(late.length >= 1, 'the poll fired');
+    for (const entry of late) entry.resolve();
+    calls.pending.length = 0;
+    await settle();
+    await settle();
+    tree = await renderIndicator(harness);
+    const shown = texts(tree).join(' ');
+    assert.match(shown, /12%/);
+    assert.match(shown, /5%/);
+    assert.doesNotMatch(shown, /80%/);
+    assert.doesNotMatch(shown, /39%/);
+  } finally {
+    calls.defer = false;
+    calls.pending.length = 0;
+    calls.health = { keys: [] };
+    calls.profile = { providers: {} };
+    restore();
+  }
+});
+
+test('the indicator stops reporting itself busy once the refresh lands', async () => {
+  // The busy flag is the trigger's "working" state. It has to come back
+  // down: a flag that latched on would leave the capsule spinning for the
+  // rest of the session.
+  const restore = stubFetch();
+  calls.profile = pooledProfile();
+  calls.health = {
+    provider: 'minimax-cn',
+    keys: [
+      {
+        name: 'primary',
+        ref: 'MINIMAX_CN_API_KEY_POOL_1',
+        enabled: true,
+        configured: true,
+        current: true,
+        quotaOk: true,
+        intervalRemainingPercent: 80,
+        weeklyRemainingPercent: 39,
+      },
+    ],
+  };
+  try {
+    const harness = boot();
+    harness.openIndicator = true;
+    await settle();
+    await settle();
+    let tree = await renderIndicator(harness);
+
+    // The trigger starts idle.
+    let trigger = byClass(tree, 'm_pool_indicatorTrigger')[0];
+    assert.equal(trigger.props['aria-busy'], 'false');
+
+    // The click makes it busy. The answer has not landed yet, so the flag
+    // is still up on the next render.
+    trigger.props.onClick();
+    tree = renderIndicatorNow(harness);
+    trigger = byClass(tree, 'm_pool_indicatorTrigger')[0];
+    assert.equal(trigger.props['aria-busy'], 'true');
+
+    // And the flag comes back down once the answer lands.
+    await settle();
+    await settle();
+    tree = renderIndicatorNow(harness);
+    trigger = byClass(tree, 'm_pool_indicatorTrigger')[0];
+    assert.equal(trigger.props['aria-busy'], 'false');
+  } finally {
+    calls.health = { keys: [] };
+    calls.profile = { providers: {} };
+    restore();
+  }
+});
+
+test('the panel is positioned inside the host, not against the viewport', async () => {
+  // The composer's seat carries `will-change: transform`, which makes it
+  // the containing block of any `position: fixed` descendant. A fixed
+  // panel would resolve its offsets against that seat instead of the
+  // viewport, so it would open far away from the capsule. The panel has to
+  // be absolute, inside a relative host.
+  const css = fs.readFileSync(path.join(__dirname, '..', 'client.js'), 'utf8');
+  const tip = /\.m_pool_indicatorTip\{([^}]*)\}/.exec(css);
+  assert.notEqual(tip, undefined, 'the panel has a style rule');
+  assert.match(tip[1], /position:absolute/);
+  assert.doesNotMatch(tip[1], /position:fixed/);
+  const host = /\.m_pool_indicatorHost\{([^}]*)\}/.exec(css);
+  assert.notEqual(host, undefined, 'the host has a style rule');
+  assert.match(host[1], /position:relative/);
+});
 
 test('the indicator never renders a key value', async () => {
   // The Host sends only the remaining share and the reset moment, so there is

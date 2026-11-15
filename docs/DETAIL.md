@@ -143,6 +143,9 @@ The quota capsule beside the model selector is the plugin's second slot
 entry. It is a **popup**: the capsule itself is a compact two-bar readout,
 and the details open in a panel above it.
 
+The panel is compact and terse: one row per key of the pool, two lines per
+row, the remaining share and the reset countdown, and nothing else.
+
 ### The slot
 
 `conversation.input.right` is the list slot for "compact controls before the
@@ -234,6 +237,54 @@ so it never swallows the pointer.
 
 A click refreshes the reading instead of toggling the panel. `Escape` closes
 the panel and stops the event, so the key does not also reach the composer.
+
+### What the panel shows
+
+The panel is terse on purpose: it floats over the composer and it holds a
+whole pool, so it carries **numbers, not sentences**. One row per key of the
+pool, and two lines per row:
+
+```
+primary   5h  ▓▓▓▓▓▓░░░░  80% 2h13m
+          7d  ▓▓▓▓░░░░░░░  39% 2d22h
+```
+
+Each line is the window's label (`5h`, `7d`), its remaining share as a bar
+and a percentage, and the time left before the window resets. The countdown
+is the short form — `45m`, `2h13m`, `2d22h` — not the settings page's prose
+(`2 小时 13 分钟`), because a line that reads `80% 2h13m` says the same thing
+in half the width.
+
+The **key in use** is marked by its colour alone, so the panel needs no
+heading and no badge.
+
+The page's own `formatDuration` stays verbose, because the settings card
+reads as prose and has the room for it. The panel uses a separate
+`formatShortDuration`.
+
+### Reading again
+
+The click is a **forced read**: it asks the Host to probe the keys instead of
+answering from the cache.
+
+```
+GET /llm-key-pool/api/health?provider=<route>&refresh=1
+```
+
+The Host's `refresh=1` clears the quota cache for that provider, so every key
+is probed against the provider's quota endpoint again.
+
+The two reads run in **separate lanes**, each with its own counter:
+
+- the **background lane** is the 60-second poll. It accepts the Host's
+  cached figures.
+- the **forced lane** is the click. It asks for a fresh probe.
+
+A forced read supersedes every background read that is still in flight, and
+the background lane stops writing while a forced read has been started. So a
+poll that lands *after* a click cannot undo the click with the cached
+figures. The two lanes also have separate busy flags, so neither can latch
+the other into a permanent "working" state.
 
 ### The list of pooled providers
 

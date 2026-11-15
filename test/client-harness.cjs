@@ -157,12 +157,32 @@ function makeReact() {
     useMemo(fn) {
       return fn()
     },
-    useCallback(fn) {
-      return fn
+    useCallback(fn, deps) {
+      // A callback keeps its identity while its dependencies hold, the way
+      // React's does. A callback that got a new identity on every render
+      // would make every effect that depends on it re-run on every render,
+      // which is a render loop the real React does not have.
+      const instance = current
+      const index = instance.cursor++
+      if (instance.slots.length <= index) instance.slots[index] = { deps: undefined, value: fn }
+      const slot = instance.slots[index]
+      const changed = slot.deps === undefined
+        || deps === undefined
+        || slot.deps.length !== deps.length
+        || deps.some((dep, i) => !Object.is(dep, slot.deps[i]))
+      if (changed) {
+        slot.deps = deps
+        slot.value = fn
+      }
+      return slot.value
     },
     useRef(initial) {
       const instance = current
       const index = instance.cursor++
+      // The ref keeps its identity between renders, the way a React ref
+      // does: only the first render seeds the value, and a later render
+      // reads the same object back. A ref that reset on every render would
+      // break every counter the component keeps in one.
       if (instance.slots.length <= index) instance.slots[index] = { current: initial }
       return instance.slots[index]
     },
@@ -326,6 +346,13 @@ const calls = {
   formSet: [],
   formMutate: [],
   fetches: [],
+  /**
+   * When true, the stubbed fetch holds every answer back until the test
+   * releases it. `pending` collects the release functions, one per held
+   * answer, in the order the answers were asked for.
+   */
+  defer: false,
+  pending: [],
   noProviders: false,
   profile: { providers: {} },
   /**
@@ -499,9 +526,11 @@ function makeContext() {
 
 /**
  * Load the client module against the mock.
+ * @param options - `{ pollMs }` shortens the indicator's poll interval, so a
+ *   test can drive the background read without waiting a minute for it.
  * @returns the module exports.
  */
-function loadClient() {
+function loadClient(options = {}) {
   const { ctx, registered, react, jsxRuntime, served, localeDict, reactDom } = makeContext()
   const originalLoad = Module._load
   Module._load = function patched(request, parent, isMain) {
@@ -512,7 +541,15 @@ function loadClient() {
     return originalLoad.call(this, request, parent, isMain)
   }
   try {
-    const code = fs.readFileSync(CLIENT, 'utf8')
+    let code = fs.readFileSync(CLIENT, 'utf8')
+    if (typeof options.pollMs === 'number') {
+      // The poll interval is a constant in the bundle; a test that needs the
+      // background read to fire can shorten it.
+      code = code.replace(
+        'const INDICATOR_POLL_MS = 60000;',
+        `const INDICATOR_POLL_MS = ${options.pollMs};`,
+      )
+    }
     // The plugin's `window` is this sandbox object, so it must carry the
     // browser globals the plugin reaches for. In a browser the sandbox window
     // and the global window are the same thing.
@@ -564,17 +601,31 @@ function composeProps(face) {
  *
  * The card asks the Host's health route for the usage figures. The stub
  * answers with `calls.health`, so a test decides what the card sees.
+ *
+ * When `calls.defer` is set, the stub holds every answer back and the
+ * test releases them one at a time. That is what lets a test decide which
+ * of two overlapping reads lands first.
  * @returns a function that puts the real fetch back.
  */
 function stubFetch() {
   const original = globalThis.fetch
   globalThis.fetch = async (url) => {
     calls.fetches.push(String(url))
+    // The body is read now, not when the answer is released: a held answer
+    // keeps the figures that were current when it was asked for, which is
+    // what lets a test hold two reads with two different sets of figures.
+    const body = calls.health
+    if (calls.defer) {
+      // The answer waits for the test to release it. The release function
+      // takes the answer to hand back, so a test can hold each read back
+      // with its own figures.
+      await new Promise((resolve) => { calls.pending.push({ resolve, url: String(url) }) })
+    }
     return {
       ok: true,
       status: 200,
       async json() {
-        return calls.health
+        return body
       },
     }
   }

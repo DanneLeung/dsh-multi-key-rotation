@@ -199,40 +199,35 @@ window.__ModuleLoader__.load({
       '.m_pool_indicatorLine{display:inline-flex;align-items:center;gap:4px;width:70px;height:6px}',
       '.m_pool_indicatorLabel{display:inline-block;width:18px;color:var(--dsw-alias-label-tertiary);font-size:9px;font-weight:600;line-height:10px;text-align:right;letter-spacing:.01em}',
       '.m_pool_indicatorTrack{display:block;width:48px;height:6px;border-radius:999px;background:var(--dsw-alias-bg-layer-3);overflow:hidden}',
-      '.m_pool_indicatorFill{display:block;height:100%;min-width:0;border-radius:inherit;transition:width .45s cubic-bezier(.3,.7,.4,1),background-color .2s ease}',
-      '.m_pool_indicatorFillOk{background:var(--dsw-alias-state-success-primary)}',
-      '.m_pool_indicatorFillWarn{background:var(--dsw-alias-state-warn-primary)}',
-      '.m_pool_indicatorFillEmpty{background:var(--dsw-alias-state-error-primary)}',
-      '.m_pool_indicatorFillMuted{background:var(--dsw-alias-label-tertiary);opacity:.55}',
-      '.m_pool_indicatorFillLoading{width:55%;background:linear-gradient(90deg,#7c8cff,#a5b4fc,#7c8cff);background-size:200% 100%;animation:m_pool_indicator_loading 1.4s ease-in-out infinite}',
       '@keyframes m_pool_indicator_loading{0%{background-position:100% 0;opacity:.42}50%{opacity:.9}100%{background-position:0 0;opacity:.42}}',
       // The hover panel: which key is in use, and both windows.
       // The panel is absolutely positioned inside the inline host, which is
       // its containing block, so it opens above the capsule without a
       // portal and without any measurement.
-      '.m_pool_indicatorTip{pointer-events:none;box-sizing:border-box;position:absolute;right:0;bottom:calc(100% + 7px);width:264px;max-width:min(264px,calc(100vw - 24px));margin:0;padding:10px 11px 9px;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-panel);background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 14px 34px rgba(0,0,0,.28);z-index:1000;line-height:1.35}',
-      '.m_pool_indicatorTipHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}',
-      '.m_pool_indicatorTipTitle{font-size:12px;font-weight:700;letter-spacing:-.01em}',
-      '.m_pool_indicatorTipSub{margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:10px}',
-      '.m_pool_indicatorTipLive{color:var(--dsw-alias-label-secondary);font-size:10px;white-space:nowrap}',
-      '.m_pool_indicatorTipError{margin:0 0 8px;padding:6px 8px;border-radius:var(--dsw-radius-sm);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 13%,transparent);color:var(--dsw-alias-state-error-primary);font-size:10px;line-height:1.45}',
-      '.m_pool_indicatorTipEmpty{padding:8px 2px;color:var(--dsw-alias-label-secondary);font-size:10px;text-align:center}',
-      '.m_pool_indicatorKey{margin-top:7px;padding:8px 9px;border-radius:var(--dsw-radius-md);background:var(--dsw-alias-bg-layer-1);border:.5px solid var(--dsw-alias-border-l1)}',
-      '.m_pool_indicatorKey:first-of-type{margin-top:0}',
-      '.m_pool_indicatorKeyActive{border-color:color-mix(in srgb,var(--dsw-alias-state-business-primary) 38%,transparent)}',
-      '.m_pool_indicatorKeyHead{display:flex;align-items:center;gap:6px;margin-bottom:6px}',
-      '.m_pool_indicatorChip{padding:2px 6px;border-radius:999px;background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 16%,transparent);color:var(--dsw-alias-state-business-primary);font-size:9px;font-weight:700}',
-      '.m_pool_indicatorKeyName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px;font-weight:650}',
-      '.m_pool_indicatorMetric{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:10px}',
-      '.m_pool_indicatorMetric b{color:var(--dsw-alias-label-primary);font-size:10px;font-weight:700;font-variant-numeric:tabular-nums}',
-      '.m_pool_indicatorHint{margin-top:8px;padding-top:7px;border-top:.5px dashed var(--dsw-alias-border-l2);color:var(--dsw-alias-label-tertiary);font-size:9.5px;line-height:1.45}',
-      // The pool list: one compact row per key.
-      '.m_pool_indicatorPool{margin-top:7px;padding-top:6px;border-top:.5px solid var(--dsw-alias-border-l1)}',
-      '.m_pool_indicatorPoolRow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 0}',
-      '.m_pool_indicatorPoolRowActive{color:var(--dsw-alias-state-business-primary)}',
-      '.m_pool_indicatorPoolName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:10px}',
-      '.m_pool_indicatorPoolRowActive .m_pool_indicatorPoolName{color:var(--dsw-alias-state-business-primary)}',
-      '.m_pool_indicatorPoolValue{color:var(--dsw-alias-label-tertiary);font-size:10px;font-variant-numeric:tabular-nums}',
+      '.m_pool_indicatorTip{pointer-events:none;box-sizing:border-box;position:absolute;right:0;bottom:calc(100% + 7px);width:232px;max-width:min(232px,calc(100vw - 24px));margin:0;padding:8px 9px;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-panel);background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 14px 34px rgba(0,0,0,.28);z-index:1000;line-height:1.35}',
+      '.m_pool_indicatorTipError{margin:0 0 6px;padding:5px 7px;border-radius:var(--dsw-radius-sm);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 13%,transparent);color:var(--dsw-alias-state-error-primary);font-size:10px;line-height:1.4}',
+      '.m_pool_indicatorTipEmpty{padding:6px 2px;color:var(--dsw-alias-label-secondary);font-size:10px;text-align:center}',
+      // One row per key: the key's name on the left, its two windows on the
+      // right. The key in use is the only one that gets a marker.
+      '.m_pool_indicatorPool{display:flex;flex-direction:column;gap:5px}',
+      '.m_pool_indicatorPoolRow{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px}',
+      '.m_pool_indicatorPoolRowActive .m_pool_indicatorPoolName{color:var(--dsw-alias-state-business-primary);font-weight:700}',
+      '.m_pool_indicatorPoolName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:10.5px}',
+      // The two bars of one key, stacked: "5h" over "7d", each with its own
+      // track, its own percentage, and its own reset countdown.
+      '.m_pool_indicatorWindows{display:flex;flex-direction:column;gap:3px;justify-items:end}',
+      '.m_pool_indicatorWindow{display:grid;grid-template-columns:16px 44px auto;align-items:center;gap:5px}',
+      '.m_pool_indicatorWindowLabel{color:var(--dsw-alias-label-tertiary);font-size:9px;font-weight:700;letter-spacing:.02em;text-align:right}',
+      '.m_pool_indicatorWindowTrack{display:block;width:44px;height:5px;border-radius:999px;background:var(--dsw-alias-bg-layer-3);overflow:hidden}',
+      '.m_pool_indicatorWindowFill{display:block;height:100%;min-width:0;border-radius:inherit;transition:width .45s cubic-bezier(.3,.7,.4,1),background-color .2s ease}',
+      '.m_pool_indicatorWindowFillOk{background:var(--dsw-alias-state-success-primary)}',
+      '.m_pool_indicatorWindowFillWarn{background:var(--dsw-alias-state-warn-primary)}',
+      '.m_pool_indicatorWindowFillEmpty{background:var(--dsw-alias-state-error-primary)}',
+      '.m_pool_indicatorWindowFillMuted{background:var(--dsw-alias-label-tertiary);opacity:.55}',
+      '.m_pool_indicatorWindowFillLoading{width:55%;background:linear-gradient(90deg,#7c8cff,#a5b4fc,#7c8cff);background-size:200% 100%;animation:m_pool_indicator_loading 1.4s ease-in-out infinite}',
+      // The value cell: "80% 2h13m" — the share, then the time left.
+      '.m_pool_indicatorWindowValue{color:var(--dsw-alias-label-primary);font-size:9.5px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}',
+      '.m_pool_indicatorWindowReset{color:var(--dsw-alias-label-tertiary);font-weight:500}',
       '.m_pool_spinner{color:var(--dsw-alias-label-tertiary);font-size:12px}',
       '@media (prefers-reduced-motion: reduce){.m_pool_quotaFill,.m_pool_switchThumb,.m_pool_chevron{transition:none}}',
     ].join('');
@@ -284,32 +279,26 @@ window.__ModuleLoader__.load({
       'indicatorPoolName': 'm_pool_indicatorPoolName',
       'indicatorPoolRow': 'm_pool_indicatorPoolRow',
       'indicatorPoolRowActive': 'm_pool_indicatorPoolRowActive',
-      'indicatorPoolValue': 'm_pool_indicatorPoolValue',
+      'indicatorWindow': 'm_pool_indicatorWindow',
+      'indicatorWindowFill': 'm_pool_indicatorWindowFill',
+      'indicatorWindowFillEmpty': 'm_pool_indicatorWindowFillEmpty',
+      'indicatorWindowFillLoading': 'm_pool_indicatorWindowFillLoading',
+      'indicatorWindowFillMuted': 'm_pool_indicatorWindowFillMuted',
+      'indicatorWindowFillOk': 'm_pool_indicatorWindowFillOk',
+      'indicatorWindowFillWarn': 'm_pool_indicatorWindowFillWarn',
+      'indicatorWindowLabel': 'm_pool_indicatorWindowLabel',
+      'indicatorWindowReset': 'm_pool_indicatorWindowReset',
+      'indicatorWindowTrack': 'm_pool_indicatorWindowTrack',
+      'indicatorWindowValue': 'm_pool_indicatorWindowValue',
+      'indicatorWindows': 'm_pool_indicatorWindows',
       'indicatorTrigger': 'm_pool_indicatorTrigger',
-      'indicatorChip': 'm_pool_indicatorChip',
-      'indicatorFill': 'm_pool_indicatorFill',
-      'indicatorFillEmpty': 'm_pool_indicatorFillEmpty',
-      'indicatorFillLoading': 'm_pool_indicatorFillLoading',
-      'indicatorFillMuted': 'm_pool_indicatorFillMuted',
-      'indicatorFillOk': 'm_pool_indicatorFillOk',
-      'indicatorFillWarn': 'm_pool_indicatorFillWarn',
-      'indicatorHint': 'm_pool_indicatorHint',
       'indicatorHost': 'm_pool_indicatorHost',
-      'indicatorKey': 'm_pool_indicatorKey',
-      'indicatorKeyActive': 'm_pool_indicatorKeyActive',
-      'indicatorKeyHead': 'm_pool_indicatorKeyHead',
-      'indicatorKeyName': 'm_pool_indicatorKeyName',
       'indicatorLabel': 'm_pool_indicatorLabel',
       'indicatorLine': 'm_pool_indicatorLine',
-      'indicatorMetric': 'm_pool_indicatorMetric',
       'indicatorRows': 'm_pool_indicatorRows',
       'indicatorTip': 'm_pool_indicatorTip',
       'indicatorTipEmpty': 'm_pool_indicatorTipEmpty',
       'indicatorTipError': 'm_pool_indicatorTipError',
-      'indicatorTipHead': 'm_pool_indicatorTipHead',
-      'indicatorTipLive': 'm_pool_indicatorTipLive',
-      'indicatorTipSub': 'm_pool_indicatorTipSub',
-      'indicatorTipTitle': 'm_pool_indicatorTipTitle',
       'indicatorTrack': 'm_pool_indicatorTrack',
       'input': 'm_pool_input',
       'intro': 'm_pool_intro',
@@ -434,7 +423,6 @@ window.__ModuleLoader__.load({
       useThisKey: 'Use this key',
       inUse: 'In use',
       pinnedHint: 'The key you pick here is the one the provider starts with. If it fails, the pool still moves on to another key.',
-      indicatorTitle: 'Multi-Key Rotation',
       indicatorActiveKey: 'Key in use',
       indicatorNoActiveKey: 'No key in use',
       indicatorLoading: 'Reading usage…',
@@ -442,9 +430,8 @@ window.__ModuleLoader__.load({
       indicatorError: 'Usage could not be read: {message}',
       indicatorNoPool: 'This provider has no key pool.',
       indicatorRefresh: 'Click to refresh',
-      indicatorWindowInterval: '5-hour window',
-      indicatorWindowWeekly: 'Weekly window',
-      indicatorResetsIn: 'resets in {duration}',
+      indicatorWindowInterval: '5h',
+      indicatorWindowWeekly: '7d',
       indicatorSummary: 'Multi-Key Rotation — {key}: 5-hour {interval}, weekly {weekly}. Click to refresh.',
     };
     const zh = {
@@ -522,7 +509,6 @@ window.__ModuleLoader__.load({
       useThisKey: '使用这个密钥',
       inUse: '使用中',
       pinnedHint: '在这里指定的密钥，就是该提供商默认使用的密钥。如果它失败，插件仍会切换到其他密钥。',
-      indicatorTitle: '多密钥轮换',
       indicatorActiveKey: '正在使用',
       indicatorNoActiveKey: '没有正在使用的密钥',
       indicatorLoading: '正在读取用量…',
@@ -530,9 +516,8 @@ window.__ModuleLoader__.load({
       indicatorError: '用量读取失败：{message}',
       indicatorNoPool: '该提供商没有密钥池。',
       indicatorRefresh: '点击刷新',
-      indicatorWindowInterval: '五小时窗口',
-      indicatorWindowWeekly: '周窗口',
-      indicatorResetsIn: '还剩 {duration}',
+      indicatorWindowInterval: '5h',
+      indicatorWindowWeekly: '7d',
       indicatorSummary: '多密钥轮换 — {key}：五小时 {interval}，每周 {weekly}。点击刷新。',
     };
     //#endregion
@@ -616,6 +601,25 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * The countdown in its terse form: "45m", "2h13m", "2d22h".
+     *
+     * The panel holds one row per key and two windows per key, so the
+     * countdown has to fit in a narrow cell without a sentence around it.
+     * The page's own `formatDuration` stays verbose, because the settings
+     * card reads as prose.
+     * @param ms - the duration in milliseconds.
+     * @returns the compact duration, or undefined when there is none.
+     */
+    function formatShortDuration(ms) {
+      if (!Number.isFinite(ms) || ms <= 0) return undefined;
+      const minutes = Math.floor(ms / 60000);
+      if (minutes < 60) return `${minutes}m`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 48) return `${hours}h${minutes % 60}m`;
+      return `${Math.floor(hours / 24)}d${hours % 24}h`;
+    }
+
+    /**
      * Clamp a percentage into the range the Host accepts.
      * @param value - the raw number.
      * @returns the clamped percentage.
@@ -642,10 +646,10 @@ window.__ModuleLoader__.load({
      * @returns the class name of the bar's fill.
      */
     function indicatorTone(percent) {
-      if (typeof percent !== 'number' || !Number.isFinite(percent)) return s.indicatorFillMuted;
-      if (percent <= INDICATOR_EMPTY_PERCENT) return s.indicatorFillEmpty;
-      if (percent < INDICATOR_WARN_PERCENT) return s.indicatorFillWarn;
-      return s.indicatorFillOk;
+      if (typeof percent !== 'number' || !Number.isFinite(percent)) return s.indicatorWindowFillMuted;
+      if (percent <= INDICATOR_EMPTY_PERCENT) return s.indicatorWindowFillEmpty;
+      if (percent < INDICATOR_WARN_PERCENT) return s.indicatorWindowFillWarn;
+      return s.indicatorWindowFillOk;
     }
 
     /**
@@ -657,8 +661,8 @@ window.__ModuleLoader__.load({
         ? Math.max(0, Math.min(100, props.percent))
         : undefined;
       const fillClass = props.loading
-        ? `${s.indicatorFill} ${s.indicatorFillLoading}`
-        : `${s.indicatorFill} ${indicatorTone(percent)}`;
+        ? `${s.indicatorWindowFill} ${s.indicatorWindowFillLoading}`
+        : `${s.indicatorWindowFill} ${indicatorTone(percent)}`;
       const width = props.loading || percent === undefined ? undefined : `${percent}%`;
       return (0, react_jsx_runtime.jsxs)('span', { className: s.indicatorLine, 'aria-hidden': 'true',
         children: [
@@ -671,88 +675,93 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * One line of the hover panel: a label and a value.
-     * @param props - the label, the value, and the reset text.
+     * One window of one key: the label, the bar, the share, and the time
+     * left before the window resets.
+     *
+     * The cell is deliberately terse — "5h  ▓▓▓▓░░░░  80% 2h13m" — because
+     * the panel holds two of these for every key of the pool.
+     * @param props - the label, the share, the reset moment, and the state.
      */
-    function IndicatorMetric(props) {
-      return (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorMetric,
+    function IndicatorWindow(props) {
+      const percent = typeof props.percent === 'number' && Number.isFinite(props.percent)
+        ? Math.max(0, Math.min(100, props.percent))
+        : undefined;
+      const fillClass = props.loading
+        ? `${s.indicatorWindowFill} ${s.indicatorWindowFillLoading}`
+        : `${s.indicatorWindowFill} ${indicatorTone(percent)}`;
+      const width = props.loading || percent === undefined ? undefined : `${percent}%`;
+      const reset = props.resetAt === undefined
+        ? undefined
+        : formatShortDuration(props.resetAt - Date.now());
+      return (0, react_jsx_runtime.jsxs)('span', { className: s.indicatorWindow,
         children: [
-          (0, react_jsx_runtime.jsx)('span', { children: props.reset ? `${props.label} · ${props.reset}` : props.label }),
-          (0, react_jsx_runtime.jsx)('b', { children: props.value }),
+          (0, react_jsx_runtime.jsx)('span', { className: s.indicatorWindowLabel, children: props.label }),
+          (0, react_jsx_runtime.jsx)('span', { className: s.indicatorWindowTrack,
+            children: (0, react_jsx_runtime.jsx)('span', { className: fillClass, style: width === undefined ? undefined : { width } }),
+          }),
+          (0, react_jsx_runtime.jsx)('span', { className: s.indicatorWindowValue,
+            children: [
+              (0, react_jsx_runtime.jsx)('span', { children: percent === undefined ? '—' : `${Math.round(percent)}%` }),
+              reset === undefined
+                ? null
+                : (0, react_jsx_runtime.jsx)('span', { className: s.indicatorWindowReset, children: ` ${reset}` }),
+            ],
+          }),
         ],
       });
     }
 
     /**
-     * The hover panel: every key of the pool, the one in use marked.
+     * The hover panel: one row per key of the pool, the one in use marked.
+     *
+     * Every key gets the same two lines — the 5-hour window and the weekly
+     * one — so the pool can be read at a glance. The key in use is the only
+     * one that carries a marker, and it is marked by its colour alone, so
+     * the panel needs no heading and no prose.
      * @param props - the keys, the loading state, the error, and the labels.
      */
     function IndicatorPanel(props) {
       const keys = props.keys;
-      const current = keys.find((entry) => entry.current === true);
-      // The compact body: the key in use, its two windows, and the pool
-      // beside it. Nothing else.
       return (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorTip, role: 'dialog', id: props.id,
         children: [
-          (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorTipHead,
-            children: [
-              (0, react_jsx_runtime.jsx)('span', { className: s.indicatorTipTitle, children: props.t('indicatorTitle') }),
-              (0, react_jsx_runtime.jsx)('span', { className: s.indicatorTipLive,
-                children: props.loading ? props.t('indicatorLoading') : props.t('indicatorRefresh'),
-              }),
-            ],
-          }),
           props.error !== undefined
             ? (0, react_jsx_runtime.jsx)('div', { className: s.indicatorTipError, children: props.error })
             : null,
-          current !== undefined
-            ? (0, react_jsx_runtime.jsxs)('div', { className: `${s.indicatorKey} ${s.indicatorKeyActive}`,
-              children: [
-                (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorKeyHead,
-                  children: [
-                    (0, react_jsx_runtime.jsx)('span', { className: s.indicatorChip, children: props.t('indicatorActiveKey') }),
-                    (0, react_jsx_runtime.jsx)('span', { className: s.indicatorKeyName,
-                      children: current.name !== '' ? current.name : current.ref,
-                    }),
-                  ],
-                }),
-                (0, react_jsx_runtime.jsx)(IndicatorMetric, {
-                  label: props.t('indicatorWindowInterval'),
-                  value: current.intervalRemainingPercent === undefined ? '—' : `${Math.round(current.intervalRemainingPercent)}%`,
-                  reset: current.intervalResetAt === undefined
-                    ? undefined
-                    : props.t('indicatorResetsIn', { duration: formatDuration(current.intervalResetAt - Date.now(), props.t) }),
-                }),
-                (0, react_jsx_runtime.jsx)(IndicatorMetric, {
-                  label: props.t('indicatorWindowWeekly'),
-                  value: current.weeklyRemainingPercent === undefined ? '—' : `${Math.round(current.weeklyRemainingPercent)}%`,
-                  reset: current.weeklyResetAt === undefined
-                    ? undefined
-                    : props.t('indicatorResetsIn', { duration: formatDuration(current.weeklyResetAt - Date.now(), props.t) }),
-                }),
-              ],
-            })
+          props.loading
+            ? (0, react_jsx_runtime.jsx)('div', { className: s.indicatorTipEmpty, children: props.t('indicatorLoading') })
             : null,
-          keys.length > 1
-            ? (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorPool,
-              children: keys.map((entry) => {
-                const active = entry.current === true;
-                const name = entry.name !== '' ? entry.name : entry.ref;
-                return (0, react_jsx_runtime.jsxs)('div', {
-                  className: `${s.indicatorPoolRow}${active ? ` ${s.indicatorPoolRowActive}` : ''}`,
-                  key: entry.ref,
-                  children: [
-                    (0, react_jsx_runtime.jsx)('span', { className: s.indicatorPoolName, children: name }),
-                    (0, react_jsx_runtime.jsx)('span', { className: s.indicatorPoolValue,
-                      children: entry.weeklyRemainingPercent === undefined
-                        ? '—'
-                        : `${Math.round(entry.weeklyRemainingPercent)}%`,
-                    }),
-                  ],
-                });
-              }),
-            })
-            : null,
+          (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorPool,
+            children: keys.map((entry) => {
+              const active = entry.current === true;
+              const name = entry.name !== '' ? entry.name : entry.ref;
+              return (0, react_jsx_runtime.jsxs)('div', {
+                className: `${s.indicatorPoolRow}${active ? ` ${s.indicatorPoolRowActive}` : ''}`,
+                key: entry.ref,
+                children: [
+                  (0, react_jsx_runtime.jsx)('span', { className: s.indicatorPoolName,
+                    title: active ? `${name} · ${props.t('indicatorActiveKey')}` : name,
+                    children: name,
+                  }),
+                  (0, react_jsx_runtime.jsxs)('span', { className: s.indicatorWindows,
+                    children: [
+                      (0, react_jsx_runtime.jsx)(IndicatorWindow, {
+                        label: props.t('indicatorWindowInterval'),
+                        percent: entry.intervalRemainingPercent,
+                        resetAt: entry.intervalResetAt,
+                        loading: props.loading,
+                      }),
+                      (0, react_jsx_runtime.jsx)(IndicatorWindow, {
+                        label: props.t('indicatorWindowWeekly'),
+                        percent: entry.weeklyRemainingPercent,
+                        resetAt: entry.weeklyResetAt,
+                        loading: props.loading,
+                      }),
+                    ],
+                  }),
+                ],
+              });
+            }),
+          }),
         ],
       });
     }
@@ -807,15 +816,27 @@ window.__ModuleLoader__.load({
       const [hovered, setHovered] = (0, react.useState)(false);
       const [focused, setFocused] = (0, react.useState)(false);
       const tooltipId = (0, react.useId)();
-      const seq = (0, react.useRef)(0);
+      // Two lanes of reads: the background poll and the forced read behind
+      // the click. Each has its own counter, so neither can make the other
+      // stale.
+      const bgSeq = (0, react.useRef)(0);
+      const forcedSeq = (0, react.useRef)(0);
+      // Whether a forced read has been started. The background lane stops
+      // writing while this holds, so a poll can never undo a click.
+      const forcedStarted = (0, react.useRef)(false);
       // The countdown text is derived from the clock, so a tick re-renders the
       // panel while it is open.
       const [, setTick] = (0, react.useState)(0);
 
-      const load = (0, react.useCallback)((force) => {
-        if (provider === undefined) return Promise.resolve();
-        const mine = ++seq.current;
-        if (force) setBusy(true);
+      // One read of the pool health.
+      //
+      // The two callers want different things, so they get different
+      // answers: the background poll is happy with the Host's cached
+      // figures, while a click asks the Host to probe the keys again. The
+      // read itself is shared, so a click that lands while a poll is still
+      // in flight has to be the answer that reaches the panel.
+      const read = (0, react.useCallback)((force) => {
+        if (provider === undefined) return Promise.resolve(undefined);
         return fetch(`${HEALTH_URL}?provider=${encodeURIComponent(provider)}${force ? '&refresh=1' : ''}`, {
           headers: { Accept: 'application/json' },
         })
@@ -823,34 +844,76 @@ window.__ModuleLoader__.load({
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json();
           })
+          .then((body) => ({ keys: Array.isArray(body?.keys) ? body.keys : [] }));
+      }, [provider]);
+
+      // The background read. A newer background read makes an older one
+      // stale, so the last one to start wins and the rest are dropped.
+      //
+      // The background lane never overwrites a forced read: a click asks
+      // the Host to probe the keys again, and a poll that started later
+      // but carries the cached figures must not undo that.
+      const load = (0, react.useCallback)(() => {
+        const mine = ++bgSeq.current;
+        return read(false)
           .then((body) => {
-            if (mine !== seq.current) return;
-            setUsage({ keys: Array.isArray(body?.keys) ? body.keys : [] });
+            if (body === undefined) return;
+            if (mine !== bgSeq.current) return;
+            if (forcedStarted.current) return;
+            setUsage(body);
             setError(undefined);
           })
           .catch((cause) => {
-            if (mine !== seq.current) return;
+            if (mine !== bgSeq.current) return;
+            if (forcedStarted.current) return;
+            setError(cause instanceof Error ? cause.message : String(cause));
+          });
+      }, [read]);
+
+      // The forced read, behind the click. It has its own lane, so a poll
+      // that starts while it is in flight cannot steal the answer and the
+      // panel cannot show the cached figures after a click.
+      const refresh = (0, react.useCallback)(() => {
+        if (provider === undefined) return Promise.resolve();
+        const mine = ++forcedSeq.current;
+        // A forced read supersedes every background read that is still in
+        // flight, so the background lane stops writing.
+        forcedStarted.current = true;
+        ++bgSeq.current;
+        setBusy(true);
+        return read(true)
+          .then((body) => {
+            if (body === undefined || mine !== forcedSeq.current) return;
+            setUsage(body);
+            setError(undefined);
+          })
+          .catch((cause) => {
+            if (mine !== forcedSeq.current) return;
             setError(cause instanceof Error ? cause.message : String(cause));
           })
           .finally(() => {
-            if (mine === seq.current && force) setBusy(false);
+            // The busy flag is cleared by whichever forced read is the
+            // newest one, so it can never latch on.
+            if (mine === forcedSeq.current) setBusy(false);
           });
-      }, [provider]);
+      }, [read]);
 
       (0, react.useEffect)(() => {
-        ++seq.current;
+        ++bgSeq.current;
+        ++forcedSeq.current;
+        forcedStarted.current = false;
         if (provider === undefined) {
           setUsage(null);
           setError(undefined);
           return undefined;
         }
-        void load(false);
-        return () => { ++seq.current; };
+        void load();
+        return () => { ++bgSeq.current; };
       }, [provider, load]);
 
       (0, react.useEffect)(() => {
         if (provider === undefined) return undefined;
-        const id = setInterval(() => { void load(false); }, INDICATOR_POLL_MS);
+        const id = setInterval(() => { void load(); }, INDICATOR_POLL_MS);
         return () => clearInterval(id);
       }, [provider, load]);
 
@@ -912,7 +975,7 @@ window.__ModuleLoader__.load({
         'aria-expanded': showPanel,
         'aria-describedby': showPanel ? tooltipId : undefined,
         title: summary,
-        onClick: () => { void load(true); },
+        onClick: () => { void refresh(); },
         onFocus: () => setFocused(true),
         onBlur: () => setFocused(false),
         onKeyDown: (event) => {
