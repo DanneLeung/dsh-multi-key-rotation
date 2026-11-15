@@ -52,6 +52,43 @@ Its parts:
   admission check, so an unauthenticated request is refused before any quota
   is probed.
 
+### The quota answer
+
+The endpoint answers with one row per model under `model_remains`. The
+fields the plugin reads are these:
+
+| Field | Meaning |
+|---|---|
+| `model_name` | the model the row describes |
+| `current_interval_remaining_percent` | the share left in the 5-hour window |
+| `current_weekly_remaining_percent` | the share left in the weekly window |
+| `end_time` | when the 5-hour window resets |
+| `weekly_end_time` | when the weekly window resets |
+| `remains_time`, `weekly_remains_time` | the same two windows as a countdown |
+| `current_interval_status`, `current_weekly_status` | `1` while the window is open |
+
+The `*_total_count` and `*_usage_count` fields are zero on a Token Plan
+answer, so the share comes from the `*_remaining_percent` fields; the
+parser falls back to the counts when a provider does report them.
+
+This mapping is verified against the live endpoint, not only against a
+recorded sample:
+
+```sh
+npm run verify:live
+```
+
+The script reads the keys from the DSH credential store, calls the real
+endpoint and checks every parsed number against the raw field it came from.
+It is deliberately not part of `npm test`, which must stay runnable without
+a network or a credential.
+- **the HTTP route** `GET /llm-key-pool/api/health?provider=<route>[&refresh=1]`
+  answers `{ provider, keys: [{ name, ref, enabled, configured, quotaOk,
+  remainingPercent, weeklyResetAt, … }] }`. `refresh=1` forces a fresh probe
+  instead of the cached one. The route sits behind the composition's
+  admission check, so an unauthenticated request is refused before any quota
+  is probed.
+
 ### Runtime identifiers
 
 The package identity and the runtime identity are deliberately apart. The npm
