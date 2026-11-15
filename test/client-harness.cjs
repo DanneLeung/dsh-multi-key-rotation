@@ -30,9 +30,32 @@ function makeReact() {
   const instances = new Map()
   let current = null
   const react = {
+    /** The effects queued by the current render, drained by `__flush`. */
+    __pending: [],
     __reset() {
       instances.clear()
       current = null
+      react.__pending = []
+    },
+    /**
+     * Run every recorded effect cleanup, the way React does it when a
+     * component unmounts. A component that polls on a timer would otherwise
+     * keep the Node event loop alive after its test finished.
+     */
+    __cleanup() {
+      react.__pending = []
+      for (const instance of instances.values()) {
+        for (const slot of instance.slots) {
+          // A slot holds either an effect record or a state value, and a
+          // state value may be null.
+          if (slot === null || slot === undefined) continue;
+          if (typeof slot.cleanup === 'function') {
+            const cleanup = slot.cleanup
+            slot.cleanup = undefined
+            cleanup()
+          }
+        }
+      }
     },
     /**
      * Enter a component instance's hook scope.
@@ -54,14 +77,34 @@ function makeReact() {
       if (instance === null) throw new Error('useState outside a component')
       const index = instance.cursor++
       const set = (value) => {
-        instance.slots[index] = typeof value === 'function' ? value(instance.slots[index]) : value
+        const next = typeof value === 'function' ? value(instance.slots[index]) : value
+        // The change is visible to the next render, the way a React state
+        // update is.
+        if (!Object.is(next, instance.slots[index])) instance.slots[index] = next
       }
       if (instance.slots.length <= index) {
         instance.slots[index] = typeof initial === 'function' ? initial() : initial
       }
       return [instance.slots[index], set]
     },
-    useEffect() {},
+    useEffect(fn, deps) {
+      const instance = current
+      const index = instance.cursor++
+      if (instance.slots.length <= index) instance.slots[index] = { deps: undefined, cleanup: undefined }
+      const slot = instance.slots[index]
+      const changed = slot.deps === undefined
+        || deps === undefined
+        || slot.deps.length !== deps.length
+        || deps.some((dep, i) => !Object.is(dep, slot.deps[i]))
+      if (!changed) return
+      if (typeof slot.cleanup === 'function') slot.cleanup()
+      slot.deps = deps
+      slot.cleanup = undefined
+      react.__pending.push(() => {
+        const result = fn()
+        if (typeof result === 'function') slot.cleanup = result
+      })
+    },
     useMemo(fn) {
       return fn()
     },
@@ -76,6 +119,9 @@ function makeReact() {
     },
     useId() {
       return 'test-id'
+    },
+    useSyncExternalStore(subscribe, getSnapshot) {
+      return getSnapshot()
     },
   }
   return react
@@ -140,7 +186,13 @@ function flatten(node, react, path) {
  * @returns the flattened tree.
  */
 function renderTree(react, component, props) {
-  return flatten({ type: component, props }, react, 'root')
+  const tree = flatten({ type: component, props }, react, 'root')
+  // The effects queued by this render run right after it, the way React runs
+  // them after the commit.
+  const queued = react.__pending
+  react.__pending = []
+  for (const effect of queued) effect()
+  return tree
 }
 
 /** A snapshot store mirroring the Host's `createSnapshotStore`. */
@@ -184,6 +236,11 @@ const calls = {
    * the card per-key usage figures; the default answers no keys.
    */
   health: { keys: [] },
+  /**
+   * The session's selected model. The indicator reads the provider from it,
+   * so a test sets it to point the composer at one provider.
+   */
+  modelSelection: { provider: 'minimax-cn', model: 'MiniMax-M3' },
 }
 
 /**
@@ -292,6 +349,28 @@ function makeContext() {
     $on: () => () => {},
   }
 
+  // The session-scoped model directory. The indicator reads the selected
+  // model from it, so a test decides which provider the session talks to.
+  const modelDirectories = {
+    directoryFor: (sessionId) => ({
+      store: {
+        getSnapshot: () => ({
+          current: calls.modelSelection,
+          routable: calls.modelSelection !== null,
+          groups: [],
+          failures: [],
+          status: 'ready',
+          pending: null,
+          error: null,
+        }),
+        subscribe: () => () => {},
+        set: (next) => { calls.modelSelection = next },
+        update: () => {},
+      },
+      sessionId,
+    }),
+  }
+
   const ctx = {
     effect: (fn) => {
       const disposer = fn()
@@ -301,9 +380,21 @@ function makeContext() {
     configForms,
     slots,
     remote,
+    modelDirectories,
+    // The Cordis fibre inject. The mock answers with a scope holding the
+    // services it was asked for, so a plugin that takes an optional service
+    // behaves the way it does in a profile that serves it.
+    inject: (names, cb) => {
+      const scope = {}
+      for (const name of names) {
+        if (name === 'modelDirectories') scope[name] = modelDirectories
+      }
+      const disposer = cb(scope)
+      return typeof disposer === 'function' ? disposer : () => {}
+    },
     logger: { error: (...args) => console.error(...args), warn: () => {}, info: () => {} },
   }
-  return { ctx, registered, react, jsxRuntime, localeDict, served }
+  return { ctx, registered, react, jsxRuntime, localeDict, served, modelDirectories }
 }
 
 /**

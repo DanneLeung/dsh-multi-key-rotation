@@ -112,9 +112,14 @@ loader keys each factory by the **package name**, scope included, so the
 module registers under `@danneleung/dsh-multi-key-rotation`; a bundle that
 registers a different id is refused with *"loaded without registering …"*.
 
-It registers one cell in the `settings.plugins.tab` slot and renders the
-configuration page. It never sees a key value: it reads quota through the
-Host route above and writes key values through `ctx.remote.credentials`.
+It registers two cells:
+
+- `settings.plugins.tab` — the configuration page.
+- `conversation.input.right` — the compact quota capsule in the composer tool
+  row, beside the model selector.
+
+It never sees a key value: it reads quota through the Host route above and
+writes key values through `ctx.remote.credentials`.
 
 ## The settings tab
 
@@ -131,6 +136,68 @@ The tab registers directly and reads the settings form lazily. It is **not**
 gated behind `configForms.whileServed`: that gate fires only once the Host's
 settings mirror holds the namespace, and the mirror has no view at boot — a
 gated registration never appears, and the page is simply absent.
+
+## The composer indicator
+
+The capsule in the composer tool row is the plugin's second slot entry.
+
+### The slot
+
+`conversation.input.right` is the list slot for "compact controls before the
+composer submit action". It is a **list** slot: a **fresh `id`** adds a cell
+beside the shipped ones, while reusing a shipped id would *replace* that cell.
+The plugin registers under `multi-key-rotation-usage`.
+
+The slot entry is **session-scoped**, so each session gets its own instance and
+its own model selection.
+
+### Finding the provider
+
+The capsule reports on the provider the **session's selected model** belongs to.
+The selection lives in `ctx.modelDirectories`, the service that owns the
+per-session `ModelDirectory` the `/model` popup and the composer seat share:
+
+```ts
+ctx.modelDirectories.directoryFor(sessionId).store
+// -> { current: { provider, model, ... }, groups, failures, status, ... }
+```
+
+`current.provider` is the provider route id — the same id the pool is
+configured under.
+
+The service is taken through `ctx.inject(['modelDirectories'], …)`, so a
+profile that does not serve it simply gets no capsule; the settings page is
+unaffected.
+
+### Reading the usage
+
+The capsule asks the Host route for the pool of that provider:
+
+```
+GET /llm-key-pool/api/health?provider=<route>
+```
+
+The answer carries one entry per key, and the entry whose `current` flag is
+true is the key the route is authenticating with. Each entry carries the two
+windows (`intervalRemainingPercent`, `weeklyRemainingPercent`) and their
+reset moments (`intervalResetAt`, `weeklyResetAt`).
+
+**No key value is ever sent to the browser.** The Host holds the values; the
+capsule receives only the remaining shares and the reset moments.
+
+### The list of pooled providers
+
+The capsule appears only for a provider this plugin pools. The list is read
+from the saved configuration on **every render**, not captured once at
+registration, so a pool that is switched on after the page loaded still gets
+its capsule.
+
+### Polling and cleanup
+
+The capsule polls the Host route every 60 seconds and re-renders the
+countdown every 30 seconds. Both timers are registered inside
+`ctx.effect`/`useEffect` and are cleared on unmount, so nothing outlives the
+component.
 
 ## Telemetry
 

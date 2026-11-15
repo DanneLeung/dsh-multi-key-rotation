@@ -22,11 +22,25 @@ const assert = require('node:assert/strict')
 const { loadClient, createSnapshotStore, composeProps, calls, renderTree, stubFetch } = require('./client-harness.cjs')
 
 /**
+ * Tear every component down after a test.
+ *
+ * A component that polls on a timer would otherwise keep the Node event
+ * loop alive after its test finished, and the runner would never exit.
+ */
+const mounted = new Set()
+
+test.afterEach(() => {
+  for (const harness of mounted) harness.react.__cleanup()
+  mounted.clear()
+})
+
+/**
  * Load the client module and apply it to the mock context.
  * @returns the harness pieces.
  */
 function boot() {
   const harness = loadClient()
+  mounted.add(harness)
   harness.sandbox.__result.apply(harness.ctx)
   return harness
 }
@@ -131,12 +145,14 @@ test('the registration does not wait for the settings mirror', () => {
   // The mirror holds no namespace at boot. A registration gated behind the
   // mirror never appears, and the settings section shows no tab at all.
   const { registered } = boot()
-  assert.equal(registered.length, 1)
+  const tabs = registered.filter((row) => row.options.name === 'settings.plugins.tab')
+  assert.equal(tabs.length, 1)
 })
 
 test('the injected face exposes the state the page renders from', () => {
   const { registered } = boot()
-  const face = registered[0].options.inject()
+  const tab = registered.find((row) => row.options.name === 'settings.plugins.tab')
+  const face = tab.options.inject()
   assert.equal(typeof face, 'object')
   assert.equal(typeof face.hooks, 'object')
   assert.equal(typeof face.hooks.keyPool?.getSnapshot, 'function')
@@ -659,6 +675,235 @@ test('the key list is ordered by the weekly remaining time', async () => {
     // The sooner-resetting key is listed first, even though it is the second
     // one in the pool.
     assert.deepEqual(names, ['soon', 'late'])
+  } finally {
+    calls.health = { keys: [] }
+    calls.profile = { providers: {} }
+    restore()
+  }
+})
+
+/**
+ * Find the composer indicator's registration.
+ * @param harness - the booted harness.
+ * @returns the registration row.
+ */
+function indicatorEntry(harness) {
+  const entry = harness.registered.find((row) => row.options.name === 'conversation.input.right')
+  assert.notEqual(entry, undefined)
+  return entry
+}
+
+/**
+ * Render the composer indicator with the face its registration injects.
+ * @param harness - the booted harness.
+ * @param sessionId - the session the indicator belongs to.
+ * @returns the rendered element tree.
+ */
+async function renderIndicator(harness, sessionId) {
+  const entry = indicatorEntry(harness)
+  const face = entry.options.inject(sessionId ?? 'session-1')
+  const t = (key, params) => {
+    if (params === undefined) return key
+    return key.replace(/\{(\w+)\}/g, (m, name) => (name in params ? String(params[name]) : m))
+  }
+  const render = () => renderTree(harness.react, entry.component, { ...face, t })
+  // The first render starts the fetch; the answer lands a tick later, so the
+  // component is rendered again to pick it up.
+  let tree = render()
+  if (harness.hoverIndicator) {
+    // The panel is mounted only while the capsule is hovered or focused, so
+    // a test that wants the detail opens it the way a user does.
+    const host = byClass(tree, 'm_pool_indicatorHost')[0]
+    if (host !== undefined) host.props.onMouseEnter()
+  }
+  // The usage answer lands a tick after the first render.
+  await settle()
+  await settle()
+  tree = render()
+  if (harness.hoverIndicator) {
+    const host = byClass(tree, 'm_pool_indicatorHost')[0]
+    if (host !== undefined) host.props.onMouseEnter()
+  }
+  return render()
+}
+
+/** A profile with one pooled provider and two named keys. */
+function pooledProfile() {
+  return {
+    providers: {
+      'minimax-cn': {
+        enabled: true,
+        rotate_on: ['QUOTA'],
+        keys: [
+          { name: 'primary', ref: 'MINIMAX_CN_API_KEY_POOL_1', enabled: true },
+          { name: 'secondary', ref: 'MINIMAX_CN_API_KEY_POOL_2', enabled: true },
+        ],
+        policy: { mode: 'failure', thresholdPercent: 0, reservePercent: 0 },
+      },
+    },
+  }
+}
+
+test('the indicator registers one cell of the composer tool row', () => {
+  // The composer row reads `conversation.input.right`; a fresh id adds a cell
+  // beside the shipped ones instead of replacing one.
+  const harness = boot()
+  const entry = indicatorEntry(harness)
+  assert.equal(entry.options.id, 'multi-key-rotation-usage')
+  assert.equal(typeof entry.options.inject, 'function')
+  assert.equal(typeof entry.component, 'function')
+})
+
+test('the indicator stays hidden for a provider the plugin does not pool', async () => {
+  // The session talks to a route this plugin does not own, so the composer
+  // row shows nothing at all.
+  const restore = stubFetch()
+  calls.profile = { providers: {} }
+  calls.modelSelection = { provider: 'deepseek', model: 'deepseek-chat' }
+  try {
+    const harness = boot()
+    await settle()
+    const tree = await renderIndicator(harness)
+    assert.equal(tree, null)
+  } finally {
+    calls.profile = { providers: {} }
+    calls.modelSelection = { provider: 'minimax-cn', model: 'MiniMax-M3' }
+    restore()
+  }
+})
+
+test('the indicator shows the key in use and both windows', async () => {
+  // The Host answers with the key the route authenticates with, and the two
+  // windows of that key.
+  const restore = stubFetch()
+  calls.profile = pooledProfile()
+  const now = Date.now()
+  calls.health = {
+    provider: 'minimax-cn',
+    keys: [
+      {
+        name: 'primary',
+        ref: 'MINIMAX_CN_API_KEY_POOL_1',
+        enabled: true,
+        configured: true,
+        current: false,
+        quotaOk: true,
+        intervalRemainingPercent: 93,
+        intervalResetAt: now + 3 * 3_600_000,
+        weeklyRemainingPercent: 41,
+        weeklyResetAt: now + 2 * 86_400_000,
+      },
+      {
+        name: 'secondary',
+        ref: 'MINIMAX_CN_API_KEY_POOL_2',
+        enabled: true,
+        configured: true,
+        current: true,
+        quotaOk: true,
+        intervalRemainingPercent: 88,
+        intervalResetAt: now + 4 * 3_600_000,
+        weeklyRemainingPercent: 55,
+        weeklyResetAt: now + 3 * 86_400_000,
+      },
+    ],
+  }
+  try {
+    const harness = boot()
+    harness.hoverIndicator = true
+    await settle()
+    await settle()
+    const tree = await renderIndicator(harness)
+    assert.notEqual(tree, null)
+    // The key in use is marked, and the other key is listed beside it.
+    const names = byClass(tree, 'm_pool_indicatorKeyName').map((node) => texts(node).join(''))
+    assert.deepEqual(names, ['primary', 'secondary'])
+    // The active key carries the highlighted border.
+    const active = byClass(tree, 'm_pool_indicatorKeyActive')
+    assert.equal(active.length, 1)
+    // Both windows are reported for the key in use.
+    const metrics = byClass(tree, 'm_pool_indicatorMetric')
+    const shown = metrics.map((node) => texts(node).join(' ')).join('\n')
+    assert.match(shown, /indicatorWindowInterval/)
+    assert.match(shown, /indicatorWindowWeekly/)
+    assert.match(shown, /88%/)
+    assert.match(shown, /55%/)
+    // The reset countdown is rendered for both windows.
+    assert.match(shown, /indicatorResetsIn/)
+  } finally {
+    calls.health = { keys: [] }
+    calls.profile = { providers: {} }
+    restore()
+  }
+})
+
+test('the indicator never renders a key value', async () => {
+  // The Host sends only the remaining share and the reset moment, so there is
+  // no key value to leak into the DOM.
+  const restore = stubFetch()
+  calls.profile = pooledProfile()
+  calls.health = {
+    provider: 'minimax-cn',
+    keys: [
+      {
+        name: 'primary',
+        ref: 'MINIMAX_CN_API_KEY_POOL_1',
+        enabled: true,
+        configured: true,
+        current: true,
+        quotaOk: true,
+        preview: 'sk-cp-1••••••ab',
+        intervalRemainingPercent: 50,
+        weeklyRemainingPercent: 50,
+      },
+    ],
+  }
+  try {
+    const harness = boot()
+    harness.hoverIndicator = true
+    await settle()
+    await settle()
+    const tree = await renderIndicator(harness)
+    const shown = texts(tree).join('\n')
+    assert.doesNotMatch(shown, /sk-cp-1/)
+    assert.doesNotMatch(shown, /•/)
+  } finally {
+    calls.health = { keys: [] }
+    calls.profile = { providers: {} }
+    restore()
+  }
+})
+
+test('a session without a model directory does not break the composer', async () => {
+  // `directoryFor` throws when the session resolves no scope, and a throw
+  // inside a slot's `inject` takes the whole composer down. The indicator
+  // tolerates the missing directory and renders nothing.
+  const restore = stubFetch()
+  calls.profile = pooledProfile()
+  const harness = boot()
+  // The directory service now refuses every session.
+  harness.ctx.modelDirectories.directoryFor = () => { throw new Error('no scope') }
+  try {
+    const tree = await renderIndicator(harness)
+    assert.equal(tree, null)
+  } finally {
+    calls.health = { keys: [] }
+    calls.profile = { providers: {} }
+    restore()
+  }
+})
+
+test('the indicator asks the Host for the usage of the session provider', async () => {
+  // The request names the provider the session talks to, so the Host answers
+  // with that provider's pool.
+  const restore = stubFetch()
+  calls.profile = pooledProfile()
+  try {
+    const harness = boot()
+    await settle()
+    await renderIndicator(harness)
+    const asked = calls.fetches.filter((url) => url.includes('llm-key-pool/api/health'))
+    assert.ok(asked.length > 0)
+    assert.ok(asked.some((url) => url.includes('provider=minimax-cn')))
   } finally {
     calls.health = { keys: [] }
     calls.profile = { providers: {} }

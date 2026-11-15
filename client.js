@@ -178,6 +178,41 @@ window.__ModuleLoader__.load({
       '.m_pool_tagInfo{background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 10%,transparent);color:var(--dsw-alias-state-business-primary)}',
       '.m_pool_footer{align-items:center;gap:10px;flex-wrap:wrap;display:flex}',
       '.m_pool_footerNote{color:var(--dsw-alias-label-secondary);font-size:12px}',
+      // The composer-row indicator: a compact two-bar quota capsule that
+      // sits beside the model selector.
+      '.m_pool_indicatorHost{display:inline-flex;position:relative;flex:none;align-items:center;height:28px;margin:0 2px;z-index:1}',
+      '.m_pool_indicator{appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;min-width:70px;min-height:28px;padding:0 4px;border:0;border-radius:var(--dsw-radius-sm);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:inherit;line-height:1;user-select:none;transition:background .14s ease,opacity .14s ease,transform .14s ease}',
+      '.m_pool_indicator:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+      '.m_pool_indicator:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:1px}',
+      '.m_pool_indicator:active{transform:scale(.98)}',
+      '.m_pool_indicatorRows{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:70px}',
+      '.m_pool_indicatorLine{display:inline-flex;align-items:center;gap:4px;width:70px;height:6px}',
+      '.m_pool_indicatorLabel{display:inline-block;width:18px;color:var(--dsw-alias-label-tertiary);font-size:9px;font-weight:600;line-height:10px;text-align:right;letter-spacing:.01em}',
+      '.m_pool_indicatorTrack{display:block;width:48px;height:6px;border-radius:999px;background:var(--dsw-alias-bg-layer-3);overflow:hidden}',
+      '.m_pool_indicatorFill{display:block;height:100%;min-width:0;border-radius:inherit;transition:width .45s cubic-bezier(.3,.7,.4,1),background-color .2s ease}',
+      '.m_pool_indicatorFillOk{background:var(--dsw-alias-state-success-primary)}',
+      '.m_pool_indicatorFillWarn{background:var(--dsw-alias-state-warn-primary)}',
+      '.m_pool_indicatorFillEmpty{background:var(--dsw-alias-state-error-primary)}',
+      '.m_pool_indicatorFillMuted{background:var(--dsw-alias-label-tertiary);opacity:.55}',
+      '.m_pool_indicatorFillLoading{width:55%;background:linear-gradient(90deg,#7c8cff,#a5b4fc,#7c8cff);background-size:200% 100%;animation:m_pool_indicator_loading 1.4s ease-in-out infinite}',
+      '@keyframes m_pool_indicator_loading{0%{background-position:100% 0;opacity:.42}50%{opacity:.9}100%{background-position:0 0;opacity:.42}}',
+      // The hover panel: which key is in use, and both windows.
+      '.m_pool_indicatorTip{pointer-events:none;position:absolute;right:0;bottom:calc(100% + 7px);width:296px;box-sizing:border-box;padding:12px 13px 10px;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-lg);background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 14px 34px rgba(0,0,0,.28);z-index:1000;line-height:1.35}',
+      '.m_pool_indicatorTipHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}',
+      '.m_pool_indicatorTipTitle{font-size:12px;font-weight:700;letter-spacing:-.01em}',
+      '.m_pool_indicatorTipSub{margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:10px}',
+      '.m_pool_indicatorTipLive{color:var(--dsw-alias-label-secondary);font-size:10px;white-space:nowrap}',
+      '.m_pool_indicatorTipError{margin:0 0 8px;padding:6px 8px;border-radius:var(--dsw-radius-sm);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 13%,transparent);color:var(--dsw-alias-state-error-primary);font-size:10px;line-height:1.45}',
+      '.m_pool_indicatorTipEmpty{padding:8px 2px;color:var(--dsw-alias-label-secondary);font-size:10px;text-align:center}',
+      '.m_pool_indicatorKey{margin-top:7px;padding:8px 9px;border-radius:var(--dsw-radius-md);background:var(--dsw-alias-bg-layer-1);border:.5px solid var(--dsw-alias-border-l1)}',
+      '.m_pool_indicatorKey:first-of-type{margin-top:0}',
+      '.m_pool_indicatorKeyActive{border-color:color-mix(in srgb,var(--dsw-alias-state-business-primary) 38%,transparent)}',
+      '.m_pool_indicatorKeyHead{display:flex;align-items:center;gap:6px;margin-bottom:6px}',
+      '.m_pool_indicatorChip{padding:2px 6px;border-radius:999px;background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 16%,transparent);color:var(--dsw-alias-state-business-primary);font-size:9px;font-weight:700}',
+      '.m_pool_indicatorKeyName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px;font-weight:650}',
+      '.m_pool_indicatorMetric{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:10px}',
+      '.m_pool_indicatorMetric b{color:var(--dsw-alias-label-primary);font-size:10px;font-weight:700;font-variant-numeric:tabular-nums}',
+      '.m_pool_indicatorHint{margin-top:8px;padding-top:7px;border-top:.5px dashed var(--dsw-alias-border-l2);color:var(--dsw-alias-label-tertiary);font-size:9.5px;line-height:1.45}',
       '.m_pool_spinner{color:var(--dsw-alias-label-tertiary);font-size:12px}',
       '@media (prefers-reduced-motion: reduce){.m_pool_quotaFill,.m_pool_switchThumb,.m_pool_chevron{transition:none}}',
     ].join('');
@@ -224,6 +259,32 @@ window.__ModuleLoader__.load({
       'footerNote': 'm_pool_footerNote',
       'hint': 'm_pool_hint',
       'iconBtn': 'm_pool_iconBtn',
+      'indicator': 'm_pool_indicator',
+      'indicatorChip': 'm_pool_indicatorChip',
+      'indicatorFill': 'm_pool_indicatorFill',
+      'indicatorFillEmpty': 'm_pool_indicatorFillEmpty',
+      'indicatorFillLoading': 'm_pool_indicatorFillLoading',
+      'indicatorFillMuted': 'm_pool_indicatorFillMuted',
+      'indicatorFillOk': 'm_pool_indicatorFillOk',
+      'indicatorFillWarn': 'm_pool_indicatorFillWarn',
+      'indicatorHint': 'm_pool_indicatorHint',
+      'indicatorHost': 'm_pool_indicatorHost',
+      'indicatorKey': 'm_pool_indicatorKey',
+      'indicatorKeyActive': 'm_pool_indicatorKeyActive',
+      'indicatorKeyHead': 'm_pool_indicatorKeyHead',
+      'indicatorKeyName': 'm_pool_indicatorKeyName',
+      'indicatorLabel': 'm_pool_indicatorLabel',
+      'indicatorLine': 'm_pool_indicatorLine',
+      'indicatorMetric': 'm_pool_indicatorMetric',
+      'indicatorRows': 'm_pool_indicatorRows',
+      'indicatorTip': 'm_pool_indicatorTip',
+      'indicatorTipEmpty': 'm_pool_indicatorTipEmpty',
+      'indicatorTipError': 'm_pool_indicatorTipError',
+      'indicatorTipHead': 'm_pool_indicatorTipHead',
+      'indicatorTipLive': 'm_pool_indicatorTipLive',
+      'indicatorTipSub': 'm_pool_indicatorTipSub',
+      'indicatorTipTitle': 'm_pool_indicatorTipTitle',
+      'indicatorTrack': 'm_pool_indicatorTrack',
       'input': 'm_pool_input',
       'intro': 'm_pool_intro',
       'keyActions': 'm_pool_keyActions',
@@ -347,6 +408,18 @@ window.__ModuleLoader__.load({
       useThisKey: 'Use this key',
       inUse: 'In use',
       pinnedHint: 'The key you pick here is the one the provider starts with. If it fails, the pool still moves on to another key.',
+      indicatorTitle: 'Multi-Key Rotation',
+      indicatorActiveKey: 'Key in use',
+      indicatorNoActiveKey: 'No key in use',
+      indicatorLoading: 'Reading usage…',
+      indicatorUnavailable: 'Usage unavailable',
+      indicatorError: 'Usage could not be read: {message}',
+      indicatorNoPool: 'This provider has no key pool.',
+      indicatorRefresh: 'Click to refresh',
+      indicatorWindowInterval: '5-hour window',
+      indicatorWindowWeekly: 'Weekly window',
+      indicatorResetsIn: 'resets in {duration}',
+      indicatorSummary: 'Multi-Key Rotation — {key}: 5-hour {interval}, weekly {weekly}. Click to refresh.',
     };
     const zh = {
       tab: '多密钥轮换',
@@ -423,6 +496,18 @@ window.__ModuleLoader__.load({
       useThisKey: '使用这个密钥',
       inUse: '使用中',
       pinnedHint: '在这里指定的密钥，就是该提供商默认使用的密钥。如果它失败，插件仍会切换到其他密钥。',
+      indicatorTitle: '多密钥轮换',
+      indicatorActiveKey: '正在使用',
+      indicatorNoActiveKey: '没有正在使用的密钥',
+      indicatorLoading: '正在读取用量…',
+      indicatorUnavailable: '无法获取用量',
+      indicatorError: '用量读取失败：{message}',
+      indicatorNoPool: '该提供商没有密钥池。',
+      indicatorRefresh: '点击刷新',
+      indicatorWindowInterval: '五小时窗口',
+      indicatorWindowWeekly: '周窗口',
+      indicatorResetsIn: '还剩 {duration}',
+      indicatorSummary: '多密钥轮换 — {key}：五小时 {interval}，每周 {weekly}。点击刷新。',
     };
     //#endregion
     //#region src/client/constants.js
@@ -514,6 +599,308 @@ window.__ModuleLoader__.load({
       return Math.min(100, Math.max(0, Math.round(value)));
     }
     //#endregion
+    //#region src/client/indicator.js
+    /** How long the indicator waits between two usage probes. */
+    const INDICATOR_POLL_MS = 60000;
+    /**
+     * The share of a window that turns the bar from healthy to low, and from
+     * low to empty. These mirror the page's own thresholds, so the composer
+     * and the settings card read the same way.
+     */
+    const INDICATOR_WARN_PERCENT = 20;
+    const INDICATOR_EMPTY_PERCENT = 0;
+
+    /**
+     * The tone of one quota bar.
+     * @param percent - the remaining share, or undefined when unknown.
+     * @returns the class name of the bar's fill.
+     */
+    function indicatorTone(percent) {
+      if (typeof percent !== 'number' || !Number.isFinite(percent)) return s.indicatorFillMuted;
+      if (percent <= INDICATOR_EMPTY_PERCENT) return s.indicatorFillEmpty;
+      if (percent < INDICATOR_WARN_PERCENT) return s.indicatorFillWarn;
+      return s.indicatorFillOk;
+    }
+
+    /**
+     * One compact bar: a short label and the remaining share.
+     * @param props - the label, the share, and whether the read is pending.
+     */
+    function IndicatorBar(props) {
+      const percent = typeof props.percent === 'number' && Number.isFinite(props.percent)
+        ? Math.max(0, Math.min(100, props.percent))
+        : undefined;
+      const fillClass = props.loading
+        ? `${s.indicatorFill} ${s.indicatorFillLoading}`
+        : `${s.indicatorFill} ${indicatorTone(percent)}`;
+      const width = props.loading || percent === undefined ? undefined : `${percent}%`;
+      return (0, react_jsx_runtime.jsxs)('span', { className: s.indicatorLine, 'aria-hidden': 'true',
+        children: [
+          (0, react_jsx_runtime.jsx)('span', { className: s.indicatorLabel, children: props.label }),
+          (0, react_jsx_runtime.jsx)('span', { className: s.indicatorTrack,
+            children: (0, react_jsx_runtime.jsx)('span', { className: fillClass, style: width === undefined ? undefined : { width } }),
+          }),
+        ],
+      });
+    }
+
+    /**
+     * One line of the hover panel: a label and a value.
+     * @param props - the label, the value, and the reset text.
+     */
+    function IndicatorMetric(props) {
+      return (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorMetric,
+        children: [
+          (0, react_jsx_runtime.jsx)('span', { children: props.reset ? `${props.label} · ${props.reset}` : props.label }),
+          (0, react_jsx_runtime.jsx)('b', { children: props.value }),
+        ],
+      });
+    }
+
+    /**
+     * The hover panel: every key of the pool, the one in use marked.
+     * @param props - the keys, the loading state, the error, and the labels.
+     */
+    function IndicatorPanel(props) {
+      const keys = props.keys;
+      return (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorTip, role: 'tooltip', id: props.id,
+        children: [
+          (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorTipHead,
+            children: [
+              (0, react_jsx_runtime.jsxs)('div', {
+                children: [
+                  (0, react_jsx_runtime.jsx)('div', { className: s.indicatorTipTitle, children: props.t('indicatorTitle') }),
+                  (0, react_jsx_runtime.jsx)('div', { className: s.indicatorTipSub, children: props.provider }),
+                ],
+              }),
+              (0, react_jsx_runtime.jsx)('span', { className: s.indicatorTipLive,
+                children: props.loading ? props.t('indicatorLoading') : props.t('indicatorRefresh'),
+              }),
+            ],
+          }),
+          props.error !== undefined
+            ? (0, react_jsx_runtime.jsx)('div', { className: s.indicatorTipError, children: props.error })
+            : null,
+          keys.length === 0 && !props.loading
+            ? (0, react_jsx_runtime.jsx)('div', { className: s.indicatorTipEmpty, children: props.t('indicatorNoPool') })
+            : null,
+          keys.map((entry) => {
+            const active = entry.current === true;
+            const name = entry.name !== '' ? entry.name : entry.ref;
+            return (0, react_jsx_runtime.jsxs)('div', {
+              className: `${s.indicatorKey}${active ? ` ${s.indicatorKeyActive}` : ''}`,
+              key: entry.ref,
+              children: [
+                (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorKeyHead,
+                  children: [
+                    active
+                      ? (0, react_jsx_runtime.jsx)('span', { className: s.indicatorChip, children: props.t('indicatorActiveKey') })
+                      : null,
+                    (0, react_jsx_runtime.jsx)('span', { className: s.indicatorKeyName, children: name }),
+                  ],
+                }),
+                entry.quotaOk === false
+                  ? (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorMetric,
+                    children: [
+                      (0, react_jsx_runtime.jsx)('span', { children: props.t('indicatorUnavailable') }),
+                      (0, react_jsx_runtime.jsx)('b', { children: '—' }),
+                    ],
+                  })
+                  : null,
+                (0, react_jsx_runtime.jsx)(IndicatorMetric, {
+                  label: props.t('indicatorWindowInterval'),
+                  value: entry.intervalRemainingPercent === undefined ? '—' : `${Math.round(entry.intervalRemainingPercent)}%`,
+                  reset: entry.intervalResetAt === undefined
+                    ? undefined
+                    : props.t('indicatorResetsIn', { duration: formatDuration(entry.intervalResetAt - Date.now(), props.t) }),
+                }),
+                (0, react_jsx_runtime.jsx)(IndicatorMetric, {
+                  label: props.t('indicatorWindowWeekly'),
+                  value: entry.weeklyRemainingPercent === undefined ? '—' : `${Math.round(entry.weeklyRemainingPercent)}%`,
+                  reset: entry.weeklyResetAt === undefined
+                    ? undefined
+                    : props.t('indicatorResetsIn', { duration: formatDuration(entry.weeklyResetAt - Date.now(), props.t) }),
+                }),
+              ],
+            });
+          }),
+          (0, react_jsx_runtime.jsx)('div', { className: s.indicatorHint, children: props.t('indicatorRefresh') }),
+        ],
+      });
+    }
+
+    /**
+     * The session's model directory.
+     *
+     * `directoryFor` throws when the session resolves no scope or no
+     * binding — a session that is tearing down, or one the Host has already
+     * dropped. A throw inside a slot's `inject` takes the whole composer
+     * down, so the lookup is guarded and the cell simply has no directory.
+     * @param directories - the model-directory service.
+     * @param sessionId - the owning session.
+     * @returns the directory's snapshot store, or undefined.
+     */
+    function directoryOf(directories, sessionId) {
+      try {
+        return directories.directoryFor(sessionId).store;
+      } catch {
+        return undefined;
+      }
+    }
+
+    /**
+     * The compact quota capsule beside the model selector.
+     *
+     * The provider comes from the session's selected model, so the indicator
+     * only appears when the session talks to a provider this plugin pools.
+     * The key that is in use and its two windows come from the Host's health
+     * route, which never sends a key value to the browser.
+     * @param props - the session's model directory, the translator, and the
+     *   Host route.
+     */
+    function PoolUsageIndicator(props) {
+      const { directory, t } = props;
+      const state = directory === undefined
+        ? undefined
+        : (0, react.useSyncExternalStore)(
+          (listener) => directory.subscribe(listener),
+          () => directory.getSnapshot(),
+          () => directory.getSnapshot(),
+        );
+      const current = state?.current ?? null;
+      const provider = current?.provider;
+      const [usage, setUsage] = (0, react.useState)(null);
+      const [error, setError] = (0, react.useState)(undefined);
+      const [busy, setBusy] = (0, react.useState)(false);
+      const [hovered, setHovered] = (0, react.useState)(false);
+      const [focused, setFocused] = (0, react.useState)(false);
+      const tooltipId = (0, react.useId)();
+      const seq = (0, react.useRef)(0);
+      // The countdown text is derived from the clock, so a tick re-renders the
+      // panel while it is open.
+      const [, setTick] = (0, react.useState)(0);
+
+      const load = (0, react.useCallback)((force) => {
+        if (provider === undefined) return Promise.resolve();
+        const mine = ++seq.current;
+        if (force) setBusy(true);
+        return fetch(`${HEALTH_URL}?provider=${encodeURIComponent(provider)}${force ? '&refresh=1' : ''}`, {
+          headers: { Accept: 'application/json' },
+        })
+          .then(async (response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
+          .then((body) => {
+            if (mine !== seq.current) return;
+            setUsage({ keys: Array.isArray(body?.keys) ? body.keys : [] });
+            setError(undefined);
+          })
+          .catch((cause) => {
+            if (mine !== seq.current) return;
+            setError(cause instanceof Error ? cause.message : String(cause));
+          })
+          .finally(() => {
+            if (mine === seq.current && force) setBusy(false);
+          });
+      }, [provider]);
+
+      (0, react.useEffect)(() => {
+        ++seq.current;
+        if (provider === undefined) {
+          setUsage(null);
+          setError(undefined);
+          return undefined;
+        }
+        void load(false);
+        return () => { ++seq.current; };
+      }, [provider, load]);
+
+      (0, react.useEffect)(() => {
+        if (provider === undefined) return undefined;
+        const id = setInterval(() => { void load(false); }, INDICATOR_POLL_MS);
+        return () => clearInterval(id);
+      }, [provider, load]);
+
+      (0, react.useEffect)(() => {
+        if (provider === undefined) return undefined;
+        const id = setInterval(() => setTick((value) => value + 1), 30000);
+        return () => clearInterval(id);
+      }, [provider]);
+
+      // The indicator belongs to a pooled provider only. A session on any
+      // other route shows nothing at all.
+      const pooled = props.pooledProviders();
+      if (!pooled.includes(provider)) return null;
+
+      const keys = usage?.keys ?? [];
+      const currentKey = keys.find((entry) => entry.current === true);
+      const loading = usage === null;
+      const intervalPercent = currentKey?.intervalRemainingPercent;
+      const weeklyPercent = currentKey?.weeklyRemainingPercent;
+      const keyName = currentKey === undefined
+        ? t('indicatorNoActiveKey')
+        : (currentKey.name !== '' ? currentKey.name : currentKey.ref);
+      const percentText = (value) => (typeof value === 'number' && Number.isFinite(value)
+        ? `${Math.round(value)}%`
+        : '—');
+      const summary = loading
+        ? t('indicatorLoading')
+        : error !== undefined
+          ? t('indicatorError', { message: error })
+          : t('indicatorSummary', {
+            key: keyName,
+            interval: percentText(intervalPercent),
+            weekly: percentText(weeklyPercent),
+          });
+      const showPanel = hovered || focused;
+
+      return (0, react_jsx_runtime.jsxs)('span', {
+        className: s.indicatorHost,
+        'data-multi-key-rotation': 'true',
+        'data-multi-key-rotation-provider': provider,
+        onMouseEnter: () => setHovered(true),
+        onMouseLeave: () => setHovered(false),
+        children: [
+          (0, react_jsx_runtime.jsx)('button', {
+            type: 'button',
+            className: s.indicator,
+            'aria-label': summary,
+            'aria-busy': busy ? 'true' : 'false',
+            'aria-describedby': showPanel ? tooltipId : undefined,
+            title: summary,
+            onClick: () => { void load(true); },
+            onFocus: () => setFocused(true),
+            onBlur: () => setFocused(false),
+            children: (0, react_jsx_runtime.jsxs)('span', { className: s.indicatorRows,
+              children: [
+                (0, react_jsx_runtime.jsx)(IndicatorBar, {
+                  label: '5h',
+                  percent: intervalPercent,
+                  loading,
+                }),
+                (0, react_jsx_runtime.jsx)(IndicatorBar, {
+                  label: '7d',
+                  percent: weeklyPercent,
+                  loading,
+                }),
+              ],
+            }),
+          }),
+          showPanel
+            ? (0, react_jsx_runtime.jsx)(IndicatorPanel, {
+              id: tooltipId,
+              keys,
+              loading,
+              error: error === undefined ? undefined : t('indicatorError', { message: error }),
+              provider,
+              t,
+            })
+            : null,
+        ],
+      });
+    }
+    //#endregion
     //#region src/client/controller.js
     let keyIdCounter = 0;
 
@@ -597,6 +984,26 @@ window.__ModuleLoader__.load({
         } catch {
           return {};
         }
+      }
+
+      /**
+       * The provider routes this plugin pools.
+       *
+       * The composer indicator uses this to decide whether the session's
+       * provider is one the pool owns: a session on any other route shows no
+       * indicator at all. The list comes from the saved configuration, so it
+       * is right before the first load settles, and it is recomputed on every
+       * call so a pool that is switched on later is picked up.
+       * @returns the pooled provider route ids.
+       */
+      pooledProviders() {
+        const out = [];
+        for (const [provider, profile] of this.readProfiles(this.readSection())) {
+          if (profile.enabled !== true) continue;
+          if (profile.keys.length === 0) continue;
+          out.push(provider);
+        }
+        return out;
       }
 
       /** Whether the Host accepts writes for this namespace. */
@@ -1909,6 +2316,30 @@ window.__ModuleLoader__.load({
         locale: LOCALE_NS,
         inject: () => controller.face(),
       }, KeyPoolPage));
+
+      // The composer-row indicator.
+      //
+      // `modelDirectories` resolves the session's selected model, whose
+      // provider names the route this indicator reports on. The service is
+      // optional: a profile without it still gets the settings page, and the
+      // indicator simply never appears.
+      ctx.inject(['modelDirectories'], (scoped) => {
+        if (scoped?.modelDirectories === undefined) return;
+        ctx.slots.inject('conversation.input.right', () => ctx.slots.register({
+          name: 'conversation.input.right',
+          id: 'multi-key-rotation-usage',
+          order: 30,
+          label: () => t('indicatorTitle'),
+          locale: LOCALE_NS,
+          inject: (sessionId) => ({
+            directory: directoryOf(scoped.modelDirectories, sessionId),
+            // The list is read on every render, so a pool that is switched on
+            // after this page loaded still gets its indicator.
+            pooledProviders: () => controller.pooledProviders(),
+            t,
+          }),
+        }, PoolUsageIndicator));
+      });
     }
     //#endregion
     exports.apply = apply;
