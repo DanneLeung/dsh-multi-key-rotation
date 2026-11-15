@@ -433,7 +433,24 @@ pnpm takes:
 | Local tarball | `D:/path/to/danneleung-dsh-multi-key-rotation-1.0.0.tgz` | A `.tgz` or `.tar.gz`. |
 | Tarball over HTTP | `https://example.com/dsh-multi-key-rotation.tgz` | A URL ending in `.tgz` or `.tar.gz`. |
 | Git URL | `git+https://github.com/DanneLeung/dsh-multi-key-rotation.git` | Also `git://…`, `git@host:owner/repo.git`, or `https://host/owner/repo`. |
-| Git shorthand | `github:DanneLeung/dsh-multi-key-rotation` | `github:`, `gitlab:`, `bitbucket:`, `gist:` are understood. |
+| Git shorthand | `github:DanneLeung/dsh-multi-key-rotation` | `github:`, `gitlab:`, `bitbucket:`, `gist:` are understood — **in the short form only**; see below. |
+
+> **The `github:` shorthand must not carry a full URL.** The short form
+> `github:DanneLeung/dsh-multi-key-rotation` works. Written out in full as
+> `github:https://github.com/DanneLeung/dsh-multi-key-rotation.git`, the
+> installer treats the whole string as a GitHub shorthand target and builds the
+> URL `git+ssh://git@github.com/https://github.com/…`, which git cannot
+> resolve:
+>
+> ```text
+> ERROR  Command failed with exit code 128: git ls-remote
+>        git+ssh://git@github.com/https://github.com/DanneLeung/dsh-multi-key-rotation.git HEAD
+> ssh: connect to host github.com port 22: Connection refused
+> fatal: Could not read from remote repository.
+> ```
+>
+> The `git+https://…` form in the table above is the one that always works.
+> It also installs over plain HTTPS, so it needs no SSH key and no port 22.
 
 #### Option 1 — a Git repository (the best fit)
 
@@ -458,6 +475,27 @@ dsh plugin --profile <profile> add "git+https://github.com/DanneLeung/dsh-multi-
 # a package inside a monorepo
 dsh plugin --profile <profile> add "git+https://github.com/DanneLeung/my-monorepo.git#<40-hex-sha>&path:/packages/dsh-multi-key-rotation"
 ```
+
+#### Option 1b — a ZIP
+
+`scripts/make-zip.mjs` builds a ZIP of exactly the published file set — the
+same list `npm pack` produces — so it carries the same content as the npm
+tarball:
+
+```sh
+node scripts/make-zip.mjs
+# wrote dist/dsh-multi-key-rotation-1.0.0.zip
+```
+
+The archive holds the package's files at its root, so unzipping it and
+pointing the installer at the folder installs the plugin:
+
+```sh
+dsh plugin --profile <profile> add D:/path/to/unzipped/dsh-multi-key-rotation
+```
+
+This is the easiest route for someone who cannot reach npm and does not have
+git: hand them the ZIP and one command.
 
 #### Option 2 — a tarball
 

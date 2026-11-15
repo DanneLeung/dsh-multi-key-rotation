@@ -74,12 +74,15 @@ dsh plugin --profile <profile> add @danneleung/dsh-multi-key-rotation
 
 ### Without npm
 
-The plugin also installs from a **Git repository**, a **tarball**, or a
-**local directory** — no npm account involved:
+The plugin also installs from a **Git repository**, a **ZIP**, a **tarball**,
+or a **local directory** — no npm account involved:
 
 ```sh
-# a Git repository
+# a Git repository — use the git+https:// form, see the note below
 dsh plugin --profile <profile> add git+https://github.com/DanneLeung/dsh-multi-key-rotation.git
+
+# a ZIP — unzip it first, then point at the folder
+dsh plugin --profile <profile> add D:/path/to/dsh-multi-key-rotation
 
 # a tarball
 dsh plugin --profile <profile> add D:/downloads/danneleung-dsh-multi-key-rotation-1.0.0.tgz
@@ -87,6 +90,18 @@ dsh plugin --profile <profile> add D:/downloads/danneleung-dsh-multi-key-rotatio
 # a local directory — the path must be absolute
 dsh plugin --profile <profile> add D:/path/to/dsh-multi-key-rotation
 ```
+
+> **Use `git+https://`, not `github:`.** The `github:` shorthand only works in
+> its short form (`github:DanneLeung/dsh-multi-key-rotation`). Written out in
+> full — `github:https://github.com/DanneLeung/dsh-multi-key-rotation.git` —
+> the installer builds a malformed SSH URL
+> (`git+ssh://git@github.com/https://github.com/…`) and fails with
+> `Could not read from remote repository`. The `git+https://` form above always
+> works.
+
+A ready-made ZIP of the published files is attached to the
+[GitHub release](https://github.com/DanneLeung/dsh-multi-key-rotation/releases).
+Unzip it, and install the folder it produces.
 
 The plugin depends only on `@deepseek-ai/schemastery` (a pure schema
 library). It deliberately does **not** depend on
