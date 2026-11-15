@@ -1,0 +1,83 @@
+{
+  "name": "@danneleung/dsh-multi-key-rotation",
+  "version": "1.0.0",
+  "description": "Give one LLM provider several named API keys and let the plugin rotate between them by remaining quota, with a quota-aware settings tab for DeepSeek Harness.",
+  "license": "MIT",
+  "author": {
+    "name": "danneleung",
+    "url": "https://github.com/danneleung"
+  },
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "src",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "docs",
+    "icon.svg",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danneleung/dsh-multi-key-rotation.git"
+  },
+  "homepage": "https://github.com/danneleung/dsh-multi-key-rotation#readme",
+  "bugs": {
+    "url": "https://github.com/danneleung/dsh-multi-key-rotation/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "dsh": ">=0.2.2-rc.3 <0.3.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-store",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-plugin-manager"
+      ]
+    }
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "cordis",
+    "minimax",
+    "token-plan",
+    "api-key",
+    "key-pool",
+    "rotation",
+    "quota",
+    "rate-limit"
+  ],
+  "scripts": {
+    "test": "node --test test/host.test.js test/client.test.cjs",
+    "pack:check": "node scripts/pack-check.mjs"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "~3.19.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.1.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" role="img" aria-label="Multi-Key Rotation">
+  <defs>
+    <linearGradient id="poolGradient" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4B6FFF"/>
+      <stop offset="1" stop-color="#7A5CFF"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#poolGradient)"/>
+  <g fill="#FFFFFF">
+    <rect x="16" y="17" width="32" height="7" rx="3.5" opacity="0.95"/>
+    <rect x="16" y="29" width="32" height="7" rx="3.5" opacity="0.72"/>
+    <rect x="16" y="41" width="20" height="7" rx="3.5" opacity="0.5"/>
+  </g>
+  <g stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" fill="none">
+    <path d="M43 30.5 L50 37.5"/>
+    <path d="M47.5 35 L44.5 38"/>
+  </g>
+</svg>

@@ -1,0 +1,29 @@
+# dsh-multi-key-rotation — bundle patch layer.
+#
+# Inserts one plugin row that mounts the server-side key-pool listener on the
+# agent loop's `agent/request-error` recovery waterfall. The browser-half
+# settings card is discovered automatically by the modules node half through
+# the `dsh.client` manifest in this package's package.json — no separate patch
+# row is needed for it.
+#
+# The bundle is applied after `@deepseek-ai/dsh-base`, so the listener
+# registers after `dsh-llm-retry` in the waterfall:
+#
+#   - TOKEN_PLAN, QUOTA and AUTH are NOT in dsh-llm-retry's default
+#     retryableCodes, so llm-retry delegates via next() and rotation acts
+#     immediately.
+#   - RATE_LIMIT IS in llm-retry's default retryableCodes, so llm-retry
+#     intercepts it first; rotation acts only after llm-retry exhausts its
+#     retry budget and delegates. To rotate on RATE_LIMIT immediately, remove
+#     RATE_LIMIT from the provider profile's retryPolicy.retryableCodes.
+#
+# Configure pools through the `llm-key-pool:` settings section (written by the
+# web/desktop Settings → Plugins → Multi-Key Rotation tab, or settings.yaml); the
+# composition `providers` map below starts empty and is overridden per
+# deployment. The `pool` entries are credential REFERENCES, never key values —
+# the key pool naming is derived by the plugin as `<ROUTE>_API_KEY_POOL_<n>`.
+- insert:
+    - id: llm-key-pool
+      name: '@danneleung/dsh-multi-key-rotation'
+      config:
+        providers: {}

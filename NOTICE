@@ -1,0 +1,61 @@
+NOTICE
+======
+
+`dsh-multi-key-rotation`
+Copyright (c) 2026 danneleung
+
+This product is licensed under the MIT License; see the `LICENSE` file.
+
+
+Acknowledgements
+----------------
+
+This plugin was inspired by, and its design deliberately builds on the work of:
+
+    `@m1khal3v/dsh-llm-key-rotation`
+    https://github.com/m1khal3v/dsh-llm-key-rotation
+    Copyright (c) 2026 Anton Mikhalev
+    Licensed under the MIT License
+
+    MIT License
+
+    Copyright (c) 2026 Anton Mikhalev
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+`dsh-multi-key-rotation` is an independent work. It is not a fork of, and it
+contains no source code from, `dsh-llm-key-rotation`. What it takes from that
+project is the *idea* of rotating between several API keys of one LLM
+provider when a quota is exhausted. The implementation, the pool model, the
+quota probing, the reset-order selection, the settings page and every line of
+code are original to this plugin.
+
+What this plugin adds on top of that idea:
+
+  * a pool the user configures by *pasting keys*, without naming environment
+    variables by hand;
+  * the pool *takes over the route* as soon as it loads, instead of waiting
+    for the first failure;
+  * remaining quota is probed per key and shown for both quota windows;
+  * the next key is chosen by *reset order* — the key whose weekly window
+    resets soonest is spent first;
+  * the user can pin the key the provider starts with;
+  * a MiniMax Token Plan quota signature (`2067`, `2056`) is recognized, so a
+    spent plan rotates instead of failing the turn;
+  * the configuration lives as a tab of the built-in Plugins settings section.

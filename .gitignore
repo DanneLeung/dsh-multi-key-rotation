@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output and packaging artifacts
+dist/
+build/
+*.tgz
+*.tar.gz
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Logs and local overrides
+*.log
+npm-debug.log*
+yarn-error.log*
+.env
+.env.local

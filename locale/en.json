@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Multi-Key Rotation",
+    "description": "Give one LLM provider several named API keys and let the plugin rotate between them automatically. The pool takes the route over as soon as it loads: it writes one of its keys into the provider’s own credential reference, so requests authenticate with a pool key instead of the key stored in Settings → Models. When a request fails with a plan quota, a quota, a rate limit, or an auth error, the plugin writes the next key of the pool into the provider's credential reference and retries the request — no restart, no lost context. Open the plugin's tab in the Plugins settings section (Settings → Plugins → Multi-Key Rotation) to configure it: add the keys one at a time or paste several at once, choose the failures that trigger a switch, pick between switching only on a failure and switching also before every request, and save. When the pool is searched for the next key, the key whose weekly window resets soonest comes first, and among those the one whose 5-hour window resets soonest — a key that is about to reset is spent before it expires. Each key's remaining quota is shown for both windows, the 5-hour one and the weekly one, next to each reset time. Key values are stored in the Harness credential store and are never written to the profile configuration. Turning the plugin off stops the rotation and leaves the provider on whichever key was written last.",
+    "detail": "docs/DETAIL.md"
+  }
+}

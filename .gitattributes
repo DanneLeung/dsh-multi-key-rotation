@@ -1,0 +1,28 @@
+# Keep the repository byte-identical to what npm publishes.
+# The package's encoding check (no NUL, no BOM, valid UTF-8) must hold for
+# every clone, on every platform, so the working tree must not rewrite
+# line endings on checkout.
+* text=auto eol=lf
+
+# Binary assets: never touched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.tgz binary
+*.tar.gz binary
+
+# Text files that must keep LF exactly.
+*.js text eol=lf
+*.cjs text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.svg text eol=lf
+*.txt text eol=lf
+LICENSE text eol=lf
+NOTICE text eol=lf
