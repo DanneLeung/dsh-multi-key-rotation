@@ -457,11 +457,38 @@ pnpm takes:
 Put the package in a Git repository and let people install a commit:
 
 ```sh
-dsh plugin --profile <profile> add git+https://github.com/DanneLeung/dsh-multi-key-rotation.git
+dsh plugin --profile desktop add git+https://github.com/DanneLeung/dsh-multi-key-rotation.git
 ```
 
 or, in the desktop app, **Plugins** → **Add plugin** and paste the same
 string.
+
+The `<name>` in `--profile <name>` is the **name** of a profile — the folder
+under `$DSH_HOME/profiles/` (`~/.dsh/profiles/` by default), not a path. The
+profiles a machine actually has are the folders in that directory:
+
+```powershell
+Get-ChildItem $env:USERPROFILE\.dsh\profiles
+# desktop
+# web
+```
+
+`desktop` is the desktop app's own profile; `web` is the CLI's web profile.
+A plugin installed into one profile is invisible to the others, because each
+profile has its own `package.json`, its own `node_modules`, and its own
+`cordis.patch.yml`.
+
+Two details of the CLI shape matter here:
+
+- `--profile` is read only **before** the forwarded arguments, so it comes
+  first — right after `plugin`.
+- The desktop app manages its own `desktop` profile, so a command-line
+  install into it can be refused. Use **Plugins** → **Add plugin** in the app
+  for that profile; the command line is the way in for `web` and for a
+  CLI-hosted DSH.
+
+Either way, **restart DSH afterwards**: adding, removing or upgrading a
+bundle is a start-up boundary, not a hot reload.
 
 This is the form that keeps working without any account: the repository is
 the source of truth, and a commit SHA pins an exact state of it. To pin one
@@ -470,10 +497,10 @@ a larger repository, append `&path:/<directory>`:
 
 ```sh
 # one exact commit
-dsh plugin --profile <profile> add "git+https://github.com/DanneLeung/dsh-multi-key-rotation.git#<40-hex-sha>"
+dsh plugin --profile desktop add "git+https://github.com/DanneLeung/dsh-multi-key-rotation.git#<40-hex-sha>"
 
 # a package inside a monorepo
-dsh plugin --profile <profile> add "git+https://github.com/DanneLeung/my-monorepo.git#<40-hex-sha>&path:/packages/dsh-multi-key-rotation"
+dsh plugin --profile desktop add "git+https://github.com/DanneLeung/my-monorepo.git#<40-hex-sha>&path:/packages/dsh-multi-key-rotation"
 ```
 
 #### Option 1b — a ZIP
@@ -491,7 +518,7 @@ The archive holds the package's files at its root, so unzipping it and
 pointing the installer at the folder installs the plugin:
 
 ```sh
-dsh plugin --profile <profile> add D:/path/to/unzipped/dsh-multi-key-rotation
+dsh plugin --profile desktop add D:/path/to/unzipped/dsh-multi-key-rotation
 ```
 
 This is the easiest route for someone who cannot reach npm and does not have
@@ -508,13 +535,13 @@ somewhere, put it in a release, or hand it over directly. People install it
 with its path:
 
 ```sh
-dsh plugin --profile <profile> add D:/downloads/danneleung-dsh-multi-key-rotation-1.0.0.tgz
+dsh plugin --profile desktop add D:/downloads/danneleung-dsh-multi-key-rotation-1.0.0.tgz
 ```
 
 or from a URL:
 
 ```sh
-dsh plugin --profile <profile> add https://example.com/danneleung-dsh-multi-key-rotation-1.0.0.tgz
+dsh plugin --profile desktop add https://example.com/danneleung-dsh-multi-key-rotation-1.0.0.tgz
 ```
 
 #### Option 3 — a local directory
@@ -522,7 +549,7 @@ dsh plugin --profile <profile> add https://example.com/danneleung-dsh-multi-key-
 For someone who already has the files:
 
 ```sh
-dsh plugin --profile <profile> add D:/path/to/dsh-multi-key-rotation
+dsh plugin --profile desktop add D:/path/to/dsh-multi-key-rotation
 ```
 
 The path must be **absolute**. The directory is installed as it stands, so

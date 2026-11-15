@@ -62,15 +62,32 @@ above, not its code. See [Acknowledgements](#acknowledgements).
 
 ## Install
 
+`<profile>` is the **name** of a DSH profile — the folder under
+`~/.dsh/profiles/`. Use `desktop` for the desktop app, `web` for the CLI's web
+profile:
+
+```powershell
+Get-ChildItem $env:USERPROFILE\.dsh\profiles
+# desktop
+# web
+```
+
+A plugin installed into one profile is invisible to the others.
+
 ### From npm
 
 ```sh
-dsh plugin --profile <profile> add @danneleung/dsh-multi-key-rotation
+dsh plugin --profile desktop add @danneleung/dsh-multi-key-rotation
 ```
 
 ### From the desktop app
 
 **Plugins** → **Add plugin** → search the market for the package name.
+
+> The desktop app manages its own `desktop` profile, so installing there from
+> the command line can be refused. Use **Plugins** → **Add plugin** in the app
+> for that profile; the command line is the way in for the `web` profile and
+> for a CLI-hosted DSH.
 
 ### Without npm
 
@@ -80,7 +97,7 @@ or a **local directory** — no npm account involved.
 **From GitHub** — use the `git+https://` form:
 
 ```sh
-dsh plugin --profile <profile> add git+https://github.com/DanneLeung/dsh-multi-key-rotation.git
+dsh plugin --profile desktop add git+https://github.com/DanneLeung/dsh-multi-key-rotation.git
 ```
 
 In the desktop app, **Plugins** → **Add plugin**, and paste that same string.
@@ -100,17 +117,17 @@ In the desktop app, **Plugins** → **Add plugin**, and paste that same string.
 2. Install the folder it produces:
 
 ```sh
-dsh plugin --profile <profile> add D:/path/to/unzipped/dsh-multi-key-rotation
+dsh plugin --profile desktop add D:/path/to/unzipped/dsh-multi-key-rotation
 ```
 
 The other forms:
 
 ```sh
 # a tarball
-dsh plugin --profile <profile> add D:/downloads/danneleung-dsh-multi-key-rotation-1.0.0.tgz
+dsh plugin --profile desktop add D:/downloads/danneleung-dsh-multi-key-rotation-1.0.0.tgz
 
 # a local directory — the path must be absolute
-dsh plugin --profile <profile> add D:/path/to/dsh-multi-key-rotation
+dsh plugin --profile desktop add D:/path/to/dsh-multi-key-rotation
 ```
 
 The plugin depends only on `@deepseek-ai/schemastery` (a pure schema
