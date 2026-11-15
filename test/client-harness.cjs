@@ -76,10 +76,13 @@ function makeReact() {
   const react = {
     /** The effects queued by the current render, drained by `__flush`. */
     __pending: [],
+    /** The content collected from portals during the current render. */
+    __portals: [],
     __reset() {
       instances.clear()
       current = null
       react.__pending = []
+      react.__portals = []
     },
     /**
      * Run every recorded effect cleanup, the way React does it when a
@@ -171,16 +174,29 @@ function makeReact() {
   return react
 }
 
+/** The marker type a portal returns; the walker hoists its children out. */
+const PORTAL = Symbol.for('react.portal')
+
 /**
  * The `react-dom` stand-in.
  *
- * The indicator portals its panel into `document.body`. The mock returns the
- * element itself, so a test still sees the panel's tree; what it cannot see
- * is the portal's placement, which the browser owns.
+ * The indicator portals its trigger and its panel into `document.body`.
+ * The mock returns the element itself, so a test still sees the tree, and it
+ * records every portal target so a test can assert where the element was
+ * portaled to.
  */
 function makeReactDom() {
+  const portals = []
   return {
-    createPortal: (element) => element,
+    /** Every portal target, in creation order. */
+    portals,
+    createPortal: (element, target) => {
+      portals.push({ element, target })
+      // The marker carries the element; the tree walker hoists it out of
+      // wherever it was rendered, the way the browser moves a portal's
+      // content into the portal target.
+      return { type: PORTAL, props: { element } }
+    },
   }
 }
 
@@ -217,6 +233,13 @@ function flatten(node, react, path) {
       .filter((child) => child !== null)
   }
   if (typeof node !== 'object') return null
+  // A portal's content lives in the portal target, not where it was
+  // rendered, so it is collected and placed at the root of the tree.
+  if (node.type === PORTAL) {
+    const inner = flatten(node.props.element, react, path)
+    if (inner !== null) react.__portals.push(inner)
+    return null
+  }
   if (typeof node.type === 'function') {
     // The instance's key is its path, so two cards of the same component keep
     // separate state.
@@ -243,13 +266,18 @@ function flatten(node, react, path) {
  * @returns the flattened tree.
  */
 function renderTree(react, component, props) {
+  react.__portals = []
   const tree = flatten({ type: component, props }, react, 'root')
   // The effects queued by this render run right after it, the way React runs
   // them after the commit.
   const queued = react.__pending
   react.__pending = []
   for (const effect of queued) effect()
-  return tree
+  // Portaled content is placed at the root, the way the browser puts it in
+  // the portal target rather than where it was rendered.
+  if (react.__portals.length === 0) return tree
+  const root = tree === null ? [] : [tree]
+  return [...root, ...react.__portals]
 }
 
 /** A snapshot store mirroring the Host's `createSnapshotStore`. */

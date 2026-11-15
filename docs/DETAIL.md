@@ -208,8 +208,24 @@ browser measures:
 - the measurement is repeated on resize and on scroll, and on a slow tick, so
   the capsule follows the selector.
 
-The capsule is `position: fixed`, the panel is portaled into
-`document.body`, and neither takes any space in the composer row.
+Neither the capsule nor the panel takes any space in the composer row, and
+**both are portaled into `document.body`**.
+
+The portal is not cosmetic. The composer's seat carries
+`will-change: transform`, which makes it a *containing block* for
+`position: fixed` descendants. A capsule left inside the composer would
+resolve its `top`/`left` against that seat's box, while the values are
+measured in viewport coordinates — so it would land far off-screen and the
+indicator would be invisible. Portaling to the body puts the capsule outside
+that containing block, and `position: fixed` resolves against the viewport
+again. The Host's own composer overlays (the slash menu, the command popup)
+portal for exactly the same reason, and the slot's own description says so:
+
+> Floating entries rendered inside the resident composer card; fixed overlays
+> must portal to the document body because the docked composer contains them.
+
+The in-flow span that occupies the slot keeps the data attributes and holds
+no box; it renders nothing.
 
 ### The list of pooled providers
 

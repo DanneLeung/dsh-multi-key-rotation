@@ -759,6 +759,41 @@ test('the indicator does not occupy a cell of the composer tool row', () => {
   assert.equal(row, undefined)
 })
 
+test('the indicator trigger is portaled to the document body', async () => {
+  // The composer's seat carries `will-change: transform`, which makes it a
+  // containing block for `position: fixed` descendants. A trigger left
+  // inside the composer would therefore resolve its top/left against the
+  // seat's box while the values are measured in viewport coordinates, and
+  // the capsule would land off-screen. The Host's own composer overlays
+  // portal to the document body for exactly this reason, so the trigger
+  // goes there too.
+  const restore = stubFetch()
+  calls.profile = pooledProfile()
+  try {
+    const harness = boot()
+    await settle()
+    const tree = await renderIndicator(harness)
+
+    const portals = harness.reactDom.portals
+    assert.ok(portals.length > 0, 'the indicator rendered no portal')
+    for (const portal of portals) {
+      assert.equal(portal.target, globalThis.document.body)
+    }
+
+    // The trigger must live in a portal, not inside the in-flow host span
+    // that sits in the composer.
+    const host = byClass(tree, 'm_pool_indicatorHost')[0]
+    assert.notEqual(host, undefined)
+    assert.equal(byClass(host, 'm_pool_indicatorTrigger').length, 0)
+
+    // And the trigger exists at all.
+    assert.equal(byClass(tree, 'm_pool_indicatorTrigger').length, 1)
+  } finally {
+    calls.profile = pooledProfile()
+    restore()
+  }
+})
+
 test('the indicator stays hidden for a provider the plugin does not pool', async () => {
   // The session talks to a route this plugin does not own, so the composer
   // row shows nothing at all.

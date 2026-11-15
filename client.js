@@ -186,11 +186,11 @@ window.__ModuleLoader__.load({
       // The host is out of the flow: absolutely positioned and zero-size,
       // so the composer row's layout never changes. Its children carry the
       // pointer events.
-      '.m_pool_indicatorHost{position:absolute;top:0;left:0;width:0;height:0;overflow:visible;pointer-events:none;z-index:1}',
+      '.m_pool_indicatorHost{display:contents}',
       // The capsule floats above the model selector. The Host's model trigger
       // publishes the CSS anchor `--dsh-model-anchor`, so the capsule is
       // anchored to it without measuring anything.
-      '.m_pool_indicatorTrigger{position:fixed;top:0;left:0;margin:0;pointer-events:auto;appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;width:70px;height:20px;padding:0;border:0;border-radius:var(--dsw-radius-sm);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:inherit;line-height:1;user-select:none;transition:background .14s ease,transform .14s ease}',
+      '.m_pool_indicatorTrigger{position:fixed;top:0;left:0;margin:0;z-index:1100;pointer-events:auto;appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;width:70px;height:20px;padding:0;border:0;border-radius:var(--dsw-radius-sm);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:inherit;line-height:1;user-select:none;transition:background .14s ease,transform .14s ease}',
       '.m_pool_indicatorTrigger:hover{background:var(--dsw-alias-interactive-bg-hover)}',
       '.m_pool_indicatorTrigger:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:1px}',
       '.m_pool_indicatorTrigger:active{transform:scale(.98)}',
@@ -970,53 +970,68 @@ window.__ModuleLoader__.load({
         })
         : null;
 
+      // The trigger is portaled as well, and that is not cosmetic.
+      //
+      // The composer's seat carries `will-change: transform`, which makes it
+      // a containing block for `position: fixed` descendants. A trigger left
+      // inside the composer would resolve its `top`/`left` against the
+      // seat's box while the values are measured in viewport coordinates, so
+      // the capsule would land far off-screen. Portaling to the body puts the
+      // trigger outside that containing block, and `position: fixed` resolves
+      // against the viewport again.
+      const trigger = (0, react_jsx_runtime.jsx)('button', {
+        type: 'button',
+        className: s.indicatorTrigger,
+        style: capsuleStyle,
+        'aria-label': summary,
+        'aria-busy': busy ? 'true' : 'false',
+        'aria-haspopup': 'dialog',
+        'aria-expanded': showPanel,
+        'aria-controls': showPanel ? tooltipId : undefined,
+        title: summary,
+        onClick: () => { setOpen((value) => !value); void load(true); },
+        onFocus: () => setFocused(true),
+        onBlur: () => setFocused(false),
+        onKeyDown: (event) => {
+          if (event.key === 'Escape') {
+            setOpen(false);
+            event.stopPropagation();
+          }
+        },
+        children: (0, react_jsx_runtime.jsxs)('span', { className: s.indicatorRows,
+          children: [
+            (0, react_jsx_runtime.jsx)(IndicatorBar, {
+              label: '5h',
+              percent: intervalPercent,
+              loading,
+            }),
+            (0, react_jsx_runtime.jsx)(IndicatorBar, {
+              label: '7d',
+              percent: weeklyPercent,
+              loading,
+            }),
+          ],
+        }),
+      });
+
+      // The in-flow host carries the data attributes and keeps the slot
+      // occupied, but it renders nothing: the trigger and the panel both
+      // live in the body.
       return (0, react_jsx_runtime.jsxs)('span', {
         className: s.indicatorHost,
         'data-multi-key-rotation': 'true',
         'data-multi-key-rotation-provider': provider,
-        children: [
-          // The trigger is fixed and zero-footprint: the composer row's
-          // layout never changes.
-          (0, react_jsx_runtime.jsx)('button', {
-            type: 'button',
-            className: s.indicatorTrigger,
-            style: capsuleStyle,
-            'aria-label': summary,
-            'aria-busy': busy ? 'true' : 'false',
-            'aria-haspopup': 'dialog',
-            'aria-expanded': showPanel,
-            'aria-controls': showPanel ? tooltipId : undefined,
-            title: summary,
-            onClick: () => { setOpen((value) => !value); void load(true); },
-            onFocus: () => setFocused(true),
-            onBlur: () => setFocused(false),
-            onKeyDown: (event) => {
-              if (event.key === 'Escape') {
-                setOpen(false);
-                event.stopPropagation();
-              }
-            },
-            children: (0, react_jsx_runtime.jsxs)('span', { className: s.indicatorRows,
+        children: typeof document === 'undefined'
+          ? null
+          : (0, react_dom.createPortal)(
+            (0, react_jsx_runtime.jsxs)(react.Fragment, {
               children: [
-                (0, react_jsx_runtime.jsx)(IndicatorBar, {
-                  label: '5h',
-                  percent: intervalPercent,
-                  loading,
-                }),
-                (0, react_jsx_runtime.jsx)(IndicatorBar, {
-                  label: '7d',
-                  percent: weeklyPercent,
-                  loading,
-                }),
+                trigger,
+                panel,
               ],
             }),
-          }),
-          // The portal needs a document. A profile without one shows
-          // the capsule but no panel.
-          panel === null || typeof document === 'undefined'
-            ? null
-            : (0, react_dom.createPortal)(panel, document.body),
-        ],
+            document.body,
+          ),
       });
     }
     //#endregion
