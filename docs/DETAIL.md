@@ -255,12 +255,40 @@ is the short form — `45m`, `2h13m`, `2d22h` — not the settings page's prose
 (`2 小时 13 分钟`), because a line that reads `80% 2h13m` says the same thing
 in half the width.
 
-The **key in use** is marked by its colour alone, so the panel needs no
-heading and no badge.
+The **key in use** carries its own tinted background, a marker bar on its
+left, and its figures in the same colour. The marker is a shape, so the
+panel needs no word to say which key is running.
 
-The page's own `formatDuration` stays verbose, because the settings card
-reads as prose and has the room for it. The panel uses a separate
-`formatShortDuration`.
+### The columns line up
+
+The panel reads as a table, so every row's figures sit on the same vertical
+lines. The columns are **fixed**, not sized by their own content:
+
+| cell | width |
+| --- | --- |
+| the key's name | 64px, truncated |
+| the window's label | 15px, right-aligned |
+| the bar's track | 40px |
+| the percentage | 34px, right-aligned |
+| the countdown | 44px, right-aligned |
+
+A content-sized column would move every row's bars sideways: the name column
+was `1fr` and the window column was `auto`, so a short-named key's bars sat
+further right than a long-named one's, and `1%` sat further right than
+`100%`.
+
+### The order of the rows
+
+The rows come back in **reset order** — the same order the pool is searched
+in when it picks the next key: the key whose **week** rolls over soonest
+comes first, and the 5-hour window breaks the tie. A key whose reset moment
+is unknown sorts last.
+
+That is the rule `rankByResetOrder` already applies to the rotation, and the
+health route now answers in it too. The settings page is unaffected: it looks
+each key's usage up **by its reference**, so the order of the array never
+reaches it, and the settings page keeps the configuration's own order — the
+order the keys are listed in while they are being edited.
 
 ### Reading again
 

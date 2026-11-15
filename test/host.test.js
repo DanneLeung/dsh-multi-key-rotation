@@ -1245,6 +1245,67 @@ test('the health answer reports both windows of every key', async () => {
   }
 })
 
+test('the health answer lists the keys in reset order', async () => {
+  // The panel shows the pool, and the pool is used in reset order: the key
+  // whose WEEK rolls over soonest comes first, and the 5-hour window breaks
+  // the tie. The health route answers in that order too, so the panel reads
+  // in the order the keys are actually spent in.
+  const ctx = makeContext()
+  const now = Date.now()
+  // The third key's week rolls over soonest; the first key's week rolls
+  // over last. The saved configuration lists them the other way round.
+  const weekSoon = now + 60_000
+  const weekLater = now + 7_200_000
+
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async (_url, init) => {
+    const token = String(init.headers.Authorization).replace('Bearer ', '')
+    // The weekly window is what differs between the keys.
+    const payload = token === 'value-b'
+      ? quotaAnswer(weekLater, weekSoon)
+      : quotaAnswer(weekLater, weekLater)
+    return {
+      ok: true,
+      status: 200,
+      async text() {
+        return JSON.stringify(payload)
+      },
+    }
+  }
+
+  try {
+    const config = {
+      providers: {
+        get: () => ({
+          'minimax-cn': {
+            enabled: true,
+            rotate_on: [...DEFAULT_ROTATE_ON],
+            keys: [
+              { name: 'primary', ref: 'MINIMAX_CN_API_KEY_POOL_1', enabled: true },
+              { name: 'secondary', ref: 'MINIMAX_CN_API_KEY_POOL_2', enabled: true },
+            ],
+            policy: { mode: 'failure', thresholdPercent: 0, reservePercent: 0 },
+          },
+        }),
+      },
+    }
+    apply(ctx, config)
+    ctx.credentials.store.set('MINIMAX_CN_API_KEY_POOL_1', 'value-a')
+    ctx.credentials.store.set('MINIMAX_CN_API_KEY_POOL_2', 'value-b')
+    ctx.credentials.store.set('MINIMAX_CN_API_KEY', 'value-a')
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const body = await callHealth(ctx, 'minimax-cn')
+    // The key whose week rolls over soonest comes first, even though the
+    // configuration lists it second.
+    assert.deepEqual(body.keys.map((key) => key.name), ['secondary', 'primary'])
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
 test('the health answer marks the pinned key', async () => {
   const ctx = makeContext()
   const originalFetch = globalThis.fetch

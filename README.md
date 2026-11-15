@@ -184,10 +184,11 @@ primary   5h  ▓▓▓▓▓▓░░░░  80% 2h13m
 ```
 
 Each line is the window's label, its remaining share as a bar and a
-percentage, and the time left before the window resets. The key the route is
-authenticating with is highlighted. The panel is deliberately terse — numbers
-rather than sentences — because it floats over the composer and holds a whole
-pool.
+percentage, and the time left before the window resets. The rows are listed
+in the order the pool is used in — the key whose week rolls over soonest
+first — and the key the route is authenticating with is highlighted. The
+panel is deliberately terse — numbers rather than sentences — because it
+floats over the composer and holds a whole pool.
 
 Moving the pointer away closes the panel, and **Escape** closes it too.
 Clicking the capsule forces a fresh probe of every key instead of waiting for

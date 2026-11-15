@@ -204,21 +204,33 @@ window.__ModuleLoader__.load({
       // The panel is absolutely positioned inside the inline host, which is
       // its containing block, so it opens above the capsule without a
       // portal and without any measurement.
-      '.m_pool_indicatorTip{pointer-events:none;box-sizing:border-box;position:absolute;right:0;bottom:calc(100% + 7px);width:232px;max-width:min(232px,calc(100vw - 24px));margin:0;padding:8px 9px;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-panel);background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 14px 34px rgba(0,0,0,.28);z-index:1000;line-height:1.35}',
+      '.m_pool_indicatorTip{pointer-events:none;box-sizing:border-box;position:absolute;right:0;bottom:calc(100% + 7px);width:256px;max-width:min(256px,calc(100vw - 24px));margin:0;padding:8px 9px;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-panel);background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 14px 34px rgba(0,0,0,.28);z-index:1000;line-height:1.35}',
       '.m_pool_indicatorTipError{margin:0 0 6px;padding:5px 7px;border-radius:var(--dsw-radius-sm);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 13%,transparent);color:var(--dsw-alias-state-error-primary);font-size:10px;line-height:1.4}',
       '.m_pool_indicatorTipEmpty{padding:6px 2px;color:var(--dsw-alias-label-secondary);font-size:10px;text-align:center}',
       // One row per key: the key's name on the left, its two windows on the
       // right. The key in use is the only one that gets a marker.
       '.m_pool_indicatorPool{display:flex;flex-direction:column;gap:5px}',
-      '.m_pool_indicatorPoolRow{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px}',
+      // The name takes a fixed slice and is truncated, and the window
+      // column has a fixed width of its own. That is what puts every row's
+      // bars and figures on the same vertical lines.
+      '.m_pool_indicatorPoolRow{display:grid;grid-template-columns:64px 1fr;align-items:center;gap:8px;position:relative;border-radius:var(--dsw-radius-sm);padding:2px 0 2px 6px;margin-left:-6px}',
+      // The key in use: a tinted row, a marker bar on its left, and its own
+      // figures in the same colour. The marker is a shape, so the panel
+      // needs no word to say which key is running.
+      '.m_pool_indicatorPoolRowActive{background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 10%,transparent)}',
+      '.m_pool_indicatorPoolRowActive::before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:2px;border-radius:999px;background:var(--dsw-alias-state-business-primary)}',
       '.m_pool_indicatorPoolRowActive .m_pool_indicatorPoolName{color:var(--dsw-alias-state-business-primary);font-weight:700}',
+      '.m_pool_indicatorPoolRowActive .m_pool_indicatorWindowValue{color:var(--dsw-alias-state-business-primary)}',
       '.m_pool_indicatorPoolName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:10.5px}',
       // The two bars of one key, stacked: "5h" over "7d", each with its own
       // track, its own percentage, and its own reset countdown.
-      '.m_pool_indicatorWindows{display:flex;flex-direction:column;gap:3px;justify-items:end}',
-      '.m_pool_indicatorWindow{display:grid;grid-template-columns:16px 44px auto;align-items:center;gap:5px}',
+      '.m_pool_indicatorWindows{display:grid;grid-template-rows:auto auto;gap:3px}',
+      // The three cells of one line: the window's name, its bar, and its
+      // share with the countdown. The value cell is fixed and right
+      // aligned, so the percentages line up down the panel.
+      '.m_pool_indicatorWindow{display:grid;grid-template-columns:15px 40px 34px 44px;align-items:center;gap:5px}',
       '.m_pool_indicatorWindowLabel{color:var(--dsw-alias-label-tertiary);font-size:9px;font-weight:700;letter-spacing:.02em;text-align:right}',
-      '.m_pool_indicatorWindowTrack{display:block;width:44px;height:5px;border-radius:999px;background:var(--dsw-alias-bg-layer-3);overflow:hidden}',
+      '.m_pool_indicatorWindowTrack{display:block;width:40px;height:5px;border-radius:999px;background:var(--dsw-alias-bg-layer-3);overflow:hidden}',
       '.m_pool_indicatorWindowFill{display:block;height:100%;min-width:0;border-radius:inherit;transition:width .45s cubic-bezier(.3,.7,.4,1),background-color .2s ease}',
       '.m_pool_indicatorWindowFillOk{background:var(--dsw-alias-state-success-primary)}',
       '.m_pool_indicatorWindowFillWarn{background:var(--dsw-alias-state-warn-primary)}',
@@ -226,8 +238,10 @@ window.__ModuleLoader__.load({
       '.m_pool_indicatorWindowFillMuted{background:var(--dsw-alias-label-tertiary);opacity:.55}',
       '.m_pool_indicatorWindowFillLoading{width:55%;background:linear-gradient(90deg,#7c8cff,#a5b4fc,#7c8cff);background-size:200% 100%;animation:m_pool_indicator_loading 1.4s ease-in-out infinite}',
       // The value cell: "80% 2h13m" — the share, then the time left.
-      '.m_pool_indicatorWindowValue{color:var(--dsw-alias-label-primary);font-size:9.5px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}',
-      '.m_pool_indicatorWindowReset{color:var(--dsw-alias-label-tertiary);font-weight:500}',
+      '.m_pool_indicatorWindowValue{color:var(--dsw-alias-label-primary);font-size:9.5px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}',
+      // The countdown takes the last column, so it never crowds the
+      // percentage and every row's countdowns line up as well.
+      '.m_pool_indicatorWindowReset{color:var(--dsw-alias-label-tertiary);font-size:9.5px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}',
       '.m_pool_spinner{color:var(--dsw-alias-label-tertiary);font-size:12px}',
       '@media (prefers-reduced-motion: reduce){.m_pool_quotaFill,.m_pool_switchThumb,.m_pool_chevron{transition:none}}',
     ].join('');
@@ -700,12 +714,10 @@ window.__ModuleLoader__.load({
             children: (0, react_jsx_runtime.jsx)('span', { className: fillClass, style: width === undefined ? undefined : { width } }),
           }),
           (0, react_jsx_runtime.jsx)('span', { className: s.indicatorWindowValue,
-            children: [
-              (0, react_jsx_runtime.jsx)('span', { children: percent === undefined ? '—' : `${Math.round(percent)}%` }),
-              reset === undefined
-                ? null
-                : (0, react_jsx_runtime.jsx)('span', { className: s.indicatorWindowReset, children: ` ${reset}` }),
-            ],
+            children: percent === undefined ? '—' : `${Math.round(percent)}%`,
+          }),
+          (0, react_jsx_runtime.jsx)('span', { className: s.indicatorWindowReset,
+            children: reset === undefined ? '' : reset,
           }),
         ],
       });

@@ -527,6 +527,14 @@ export function apply(ctx, config) {
    * same provider usually differ only in those characters, so the
    * preview is what lets the user tell them apart. The Host computes it
    * because the Host holds the values; the browser never sees one.
+   *
+   * The keys come back in RESET ORDER — the same order the pool is
+   * searched in when it picks the next key: the key whose WEEK rolls over
+   * soonest first, and the 5-hour window breaking the tie. A key whose
+   * reset moment is unknown sorts last.
+   *
+   * The settings page is unaffected by that order: it looks each key's
+   * usage up BY ITS REFERENCE.
    * @param provider - provider route id.
    * @returns the per-key preview, remaining share, and reset moment.
    */
@@ -535,33 +543,40 @@ export function apply(ctx, config) {
     if (all[provider] === undefined) return []
     const profile = profileOf(all, provider)
     const state = stateOf(provider)
-    return profile.keys.map((entry) => {
+    const entries = profile.keys.map((entry) => {
       const quota = state.quotas.get(entry.ref)
       const value = state.values.get(entry.ref)
       return {
-        name: entry.name,
-        ref: entry.ref,
-        enabled: entry.enabled,
-        configured: value !== undefined,
-        preview: previewOf(value),
-        // Whether the user pinned this key, and whether it is the one the
-        // route is authenticating with right now.
-        pinned: entry.ref === profile.pinned_ref,
-        current: value !== undefined && value === state.currentValue,
-        quotaOk: quota?.ok === true,
-        quotaError: quota?.ok === false ? quota.error : undefined,
-        planName: quota?.planName,
-        remainingPercent: overallRemainingPercent(quota),
-        // Both windows, separately: the 5-hour window says how long the key
-        // can keep going, the weekly window says how much of the week's
-        // allowance is left. The card shows both, because the switching
-        // policy compares them.
-        intervalRemainingPercent: intervalRemainingPercent(quota),
-        intervalResetAt: intervalResetAt(quota),
-        weeklyRemainingPercent: weeklyRemainingPercent(quota),
-        weeklyResetAt: weeklyResetAt(quota),
+        entry,
+        quota,
+        health: {
+          name: entry.name,
+          ref: entry.ref,
+          enabled: entry.enabled,
+          configured: value !== undefined,
+          preview: previewOf(value),
+          // Whether the user pinned this key, and whether it is the one the
+          // route is authenticating with right now.
+          pinned: entry.ref === profile.pinned_ref,
+          current: value !== undefined && value === state.currentValue,
+          quotaOk: quota?.ok === true,
+          quotaError: quota?.ok === false ? quota.error : undefined,
+          planName: quota?.planName,
+          remainingPercent: overallRemainingPercent(quota),
+          // Both windows, separately: the 5-hour window says how long the key
+          // can keep going, the weekly window says how much of the week's
+          // allowance is left. The card shows both, because the switching
+          // policy compares them.
+          intervalRemainingPercent: intervalRemainingPercent(quota),
+          intervalResetAt: intervalResetAt(quota),
+          weeklyRemainingPercent: weeklyRemainingPercent(quota),
+          weeklyResetAt: weeklyResetAt(quota),
+        },
       }
     })
+    // The order the pool is used in: the key whose week rolls over soonest
+    // comes first, and the 5-hour window breaks the tie.
+    return rankByResetOrder(entries).map((ranked) => ranked.health)
   }
 
   /**

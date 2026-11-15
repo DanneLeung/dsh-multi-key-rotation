@@ -954,6 +954,99 @@ test('the indicator gives every key two bars with its reset countdown', async ()
   }
 });
 
+test('the key in use is marked by more than its name', async () => {
+  // The active row used to differ from the other rows only in the colour
+  // of its name. It now carries its own background, a marker bar, and its
+  // figures in the same colour, so a glance at the panel shows which key
+  // is running.
+  const restore = stubFetch();
+  calls.profile = pooledProfile();
+  calls.health = {
+    provider: 'minimax-cn',
+    keys: [
+      {
+        name: 'primary',
+        ref: 'MINIMAX_CN_API_KEY_POOL_1',
+        enabled: true,
+        configured: true,
+        current: false,
+        quotaOk: true,
+        intervalRemainingPercent: 93,
+        weeklyRemainingPercent: 41,
+      },
+      {
+        name: 'secondary',
+        ref: 'MINIMAX_CN_API_KEY_POOL_2',
+        enabled: true,
+        configured: true,
+        current: true,
+        quotaOk: true,
+        intervalRemainingPercent: 88,
+        weeklyRemainingPercent: 55,
+      },
+    ],
+  };
+  try {
+    const harness = boot();
+    harness.openIndicator = true;
+    await settle();
+    await settle();
+    const tree = await renderIndicator(harness);
+
+    // Exactly one row is the active one, and it is the key in use.
+    const active = byClass(tree, 'm_pool_indicatorPoolRowActive');
+    assert.equal(active.length, 1);
+    const activeName = byClass(active[0], 'm_pool_indicatorPoolName').map((node) => texts(node).join(''));
+    assert.deepEqual(activeName, ['secondary']);
+
+    // The style sheet gives that row a background and a marker bar.
+    const css = fs.readFileSync(path.join(__dirname, '..', 'client.js'), 'utf8');
+    const row = /\.m_pool_indicatorPoolRowActive\{([^}]*)\}/.exec(css);
+    assert.notEqual(row, undefined, 'the active row has a style rule');
+    assert.match(row[1], /background:/);
+    const marker = /\.m_pool_indicatorPoolRowActive::before\{([^}]*)\}/.exec(css);
+    assert.notEqual(marker, undefined, 'the active row has a marker');
+    assert.match(marker[1], /background:var\(--dsw-alias-state-business-primary\)/);
+    // And its figures carry the same colour.
+    assert.match(
+      css,
+      /\.m_pool_indicatorPoolRowActive \.m_pool_indicatorWindowValue\{([^}]*)\}/,
+    );
+  } finally {
+    calls.health = { keys: [] };
+    calls.profile = { providers: {} };
+    restore();
+  }
+});
+
+test('the panel lines its columns up', async () => {
+  // Every row's bars and figures have to sit on the same vertical lines,
+  // or the panel reads as a ragged list. The name column and the value
+  // column are therefore fixed, not sized by their own content.
+  const css = fs.readFileSync(path.join(__dirname, '..', 'client.js'), 'utf8');
+
+  // The name column is a fixed slice of the row, and the window column
+  // takes what is left.
+  const row = /\.m_pool_indicatorPoolRow\{([^}]*)\}/.exec(css);
+  assert.notEqual(row, undefined);
+  assert.match(row[1], /grid-template-columns:\d+px 1fr/);
+  assert.doesNotMatch(row[1], /1fr auto/);
+
+  // The three cells of one line are fixed too, and the value cell is
+  // right-aligned. The rule is matched on its own, not through the
+  // active-row override that follows it.
+  const window = /\.m_pool_indicatorWindow\{([^}]*)\}/.exec(css);
+  assert.notEqual(window, undefined);
+  assert.match(window[1], /grid-template-columns:\d+px \d+px \d+px \d+px/);
+  const value = /'\.m_pool_indicatorWindowValue\{([^}]*)\}'/.exec(css);
+  assert.notEqual(value, undefined);
+  assert.match(value[1], /text-align:right/);
+  // The countdown has a cell of its own, so it never crowds the percentage.
+  const reset = /'\.m_pool_indicatorWindowReset\{([^}]*)\}'/.exec(css);
+  assert.notEqual(reset, undefined);
+  assert.match(reset[1], /text-align:right/);
+});
+
 test('the indicator bar width follows the reported share', async () => {
   // The bar is the number: its width has to be the share the Host sent.
   const restore = stubFetch();
