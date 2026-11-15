@@ -688,7 +688,7 @@ test('the key list is ordered by the weekly remaining time', async () => {
  * @returns the registration row.
  */
 function indicatorEntry(harness) {
-  const entry = harness.registered.find((row) => row.options.name === 'conversation.input.right')
+  const entry = harness.registered.find((row) => row.options.name === 'conversation.input.overlay')
   assert.notEqual(entry, undefined)
   return entry
 }
@@ -710,21 +710,17 @@ async function renderIndicator(harness, sessionId) {
   // The first render starts the fetch; the answer lands a tick later, so the
   // component is rendered again to pick it up.
   let tree = render()
-  if (harness.hoverIndicator) {
-    // The panel is mounted only while the capsule is hovered or focused, so
-    // a test that wants the detail opens it the way a user does.
-    const host = byClass(tree, 'm_pool_indicatorHost')[0]
-    if (host !== undefined) host.props.onMouseEnter()
-  }
-  // The usage answer lands a tick after the first render.
   await settle()
   await settle()
   tree = render()
-  if (harness.hoverIndicator) {
-    const host = byClass(tree, 'm_pool_indicatorHost')[0]
-    if (host !== undefined) host.props.onMouseEnter()
+  if (harness.openIndicator) {
+    // The panel opens on a click, the way a user opens it. It is clicked
+    // once: a second click would close the panel again.
+    const trigger = byClass(tree, 'm_pool_indicatorTrigger')[0]
+    if (trigger !== undefined) trigger.props.onClick()
+    tree = render()
   }
-  return render()
+  return tree
 }
 
 /** A profile with one pooled provider and two named keys. */
@@ -744,14 +740,23 @@ function pooledProfile() {
   }
 }
 
-test('the indicator registers one cell of the composer tool row', () => {
-  // The composer row reads `conversation.input.right`; a fresh id adds a cell
-  // beside the shipped ones instead of replacing one.
+test('the indicator registers one cell of the floating composer overlay', () => {
+  // `conversation.input.overlay` holds the floating entries of the composer
+  // card, and a fixed overlay portals to the document body. A fresh id adds a
+  // cell beside the shipped ones instead of replacing one.
   const harness = boot()
   const entry = indicatorEntry(harness)
   assert.equal(entry.options.id, 'multi-key-rotation-usage')
   assert.equal(typeof entry.options.inject, 'function')
   assert.equal(typeof entry.component, 'function')
+})
+
+test('the indicator does not occupy a cell of the composer tool row', () => {
+  // The tool row is a fixed layout: a cell there changes the input's
+  // geometry. The indicator must not take one.
+  const harness = boot()
+  const row = harness.registered.find((r) => r.options.name === 'conversation.input.right')
+  assert.equal(row, undefined)
 })
 
 test('the indicator stays hidden for a provider the plugin does not pool', async () => {
@@ -809,17 +814,19 @@ test('the indicator shows the key in use and both windows', async () => {
   }
   try {
     const harness = boot()
-    harness.hoverIndicator = true
+    harness.openIndicator = true
     await settle()
     await settle()
     const tree = await renderIndicator(harness)
     assert.notEqual(tree, null)
-    // The key in use is marked, and the other key is listed beside it.
-    const names = byClass(tree, 'm_pool_indicatorKeyName').map((node) => texts(node).join(''))
-    assert.deepEqual(names, ['primary', 'secondary'])
-    // The active key carries the highlighted border.
+    // The key in use is the one in the main block, marked as active.
     const active = byClass(tree, 'm_pool_indicatorKeyActive')
     assert.equal(active.length, 1)
+    const name = byClass(tree, 'm_pool_indicatorKeyName').map((node) => texts(node).join(''))
+    assert.deepEqual(name, ['secondary'])
+    // The rest of the pool is listed compactly beside it.
+    const pool = byClass(tree, 'm_pool_indicatorPoolName').map((node) => texts(node).join(''))
+    assert.deepEqual(pool, ['primary', 'secondary'])
     // Both windows are reported for the key in use.
     const metrics = byClass(tree, 'm_pool_indicatorMetric')
     const shown = metrics.map((node) => texts(node).join(' ')).join('\n')
@@ -859,7 +866,7 @@ test('the indicator never renders a key value', async () => {
   }
   try {
     const harness = boot()
-    harness.hoverIndicator = true
+    harness.openIndicator = true
     await settle()
     await settle()
     const tree = await renderIndicator(harness)

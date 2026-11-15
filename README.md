@@ -33,10 +33,11 @@ Three things make it more than a rotation loop:
 3. **You can see the quota.** Each key's remaining share is shown for both
    quota windows — the 5-hour one and the weekly one — next to its reset
    countdown.
-4. **The composer shows what is running.** A compact capsule sits beside the
-   model selector with two bars — the 5-hour and the weekly window of the key
-   in use. Hover it to see which key is running, both remaining shares, and
-   when each window resets.
+4. **The composer shows what is running.** A compact capsule floats above
+   the model selector with two bars — the 5-hour and the weekly window of the
+   key in use. Click it to see which key is running, both remaining shares,
+   and when each window resets. It floats over the composer, so the input's
+   layout does not change.
 
 ## Why this exists
 
@@ -53,7 +54,7 @@ removes:
 | Who owns the route's key | the Models page | the plugin takes it over as soon as it loads |
 | Picking the key yourself | not possible | a per-key button pins the key the provider starts with |
 | Remaining quota | not shown | queried per key, for the 5-hour window and the weekly one |
-| In the composer | not shown | a capsule beside the model selector shows the key in use, both windows, and both countdowns |
+| In the composer | not shown | a capsule floating above the model selector shows the key in use, both windows, and both countdowns |
 | Switching | on failure only | on failure, and the next key is picked by reset order |
 | MiniMax Token Plan | an HTTP 402 arrives as `PI_AI_ERROR` and rotates on nothing | a spent plan is recognized and rotates |
 
@@ -166,8 +167,7 @@ that does not work. Clicking it again unpins it. The pin is stored as a
 
 ## The composer indicator
 
-Next to the model selector in the composer, the plugin shows a small capsule
-with two bars:
+Above the model selector, the plugin floats a small capsule with two bars:
 
 - **5h** — the remaining share of the 5-hour window of the key in use
 - **7d** — the remaining share of the weekly window of the same key
@@ -175,11 +175,14 @@ with two bars:
 The bars are colored by the remaining share: green while it is healthy, amber
 under 20%, red at zero.
 
-Hover the capsule — or focus it with the keyboard — to open a panel that lists
-every key of the pool and marks the one the route is authenticating with. The
-panel shows each key's 5-hour and weekly remaining share and the countdown to
-each window's reset. Click the capsule to force a fresh probe instead of
-waiting for the next poll.
+Click the capsule to open a panel. It shows the key the route is
+authenticating with, its two remaining shares, and the countdown to each
+window's reset. Below that, the rest of the pool is listed compactly with
+each key's weekly share. Clicking the capsule also forces a fresh probe
+instead of waiting for the next poll; **Escape** closes the panel.
+
+The capsule floats over the composer — it does not take a cell in the input
+row, so the input's layout is unchanged.
 
 The indicator only appears for a provider this plugin pools, and only while a
 session is open. It never shows a key value — only the remaining shares and

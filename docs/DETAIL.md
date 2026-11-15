@@ -139,22 +139,30 @@ gated registration never appears, and the page is simply absent.
 
 ## The composer indicator
 
-The capsule in the composer tool row is the plugin's second slot entry.
+The capsule above the model selector is the plugin's second slot entry. It is
+a **popup**: it floats over the composer and never takes a cell in the input
+row, so the input's layout does not change.
 
 ### The slot
 
-`conversation.input.right` is the list slot for "compact controls before the
-composer submit action". It is a **list** slot: a **fresh `id`** adds a cell
-beside the shipped ones, while reusing a shipped id would *replace* that cell.
-The plugin registers under `multi-key-rotation-usage`.
+`conversation.input.overlay` is the list slot for "floating entries rendered
+inside the resident composer card". Its purpose also says that a fixed
+overlay must **portal to the document body**, because the docked composer
+contains the card. It is a **list** slot: a **fresh `id`** adds a cell
+beside the shipped ones, while reusing a shipped id would *replace* that
+cell. The plugin registers under `multi-key-rotation-usage`.
 
-The slot entry is **session-scoped**, so each session gets its own instance and
-its own model selection.
+`conversation.input.right` — the composer tool row — is deliberately **not**
+used. A cell there is a fixed part of the row's layout, so taking one changes
+the input's geometry.
+
+The slot entry is **session-scoped**, so each session gets its own instance
+and its own model selection.
 
 ### Finding the provider
 
-The capsule reports on the provider the **session's selected model** belongs to.
-The selection lives in `ctx.modelDirectories`, the service that owns the
+The capsule reports on the provider the **session's selected model** belongs
+to. The selection lives in `ctx.modelDirectories`, the service that owns the
 per-session `ModelDirectory` the `/model` popup and the composer seat share:
 
 ```ts
@@ -185,6 +193,24 @@ reset moments (`intervalResetAt`, `weeklyResetAt`).
 **No key value is ever sent to the browser.** The Host holds the values; the
 capsule receives only the remaining shares and the reset moments.
 
+### Placement
+
+The capsule is placed against the model selector's own rectangle, which the
+browser measures:
+
+- the Host's model trigger publishes a CSS anchor (`--dsh-model-anchor`),
+  but the anchor's *name* is a private detail of that component — it is
+  generated per instance and no service exposes it. Reaching for it would
+  couple this plugin to an implementation detail that may change;
+- so the capsule measures instead. The Host renders the selected model inside
+  a span carrying `data-provider-id` and `data-model-id`, and the composer
+  card carries `data-composer-card`;
+- the measurement is repeated on resize and on scroll, and on a slow tick, so
+  the capsule follows the selector.
+
+The capsule is `position: fixed`, the panel is portaled into
+`document.body`, and neither takes any space in the composer row.
+
 ### The list of pooled providers
 
 The capsule appears only for a provider this plugin pools. The list is read
@@ -195,9 +221,8 @@ its capsule.
 ### Polling and cleanup
 
 The capsule polls the Host route every 60 seconds and re-renders the
-countdown every 30 seconds. Both timers are registered inside
-`ctx.effect`/`useEffect` and are cleared on unmount, so nothing outlives the
-component.
+countdown every 30 seconds. Every timer and listener is registered inside an
+effect and is cleared on unmount, so nothing outlives the component.
 
 ## Telemetry
 

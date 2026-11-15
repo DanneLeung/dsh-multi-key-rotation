@@ -55,6 +55,7 @@ window.__ModuleLoader__.load({
     Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
     const react = require('react');
     const react_jsx_runtime = require('react/jsx-runtime');
+    const react_dom = require('react-dom');
     const _deepseek_ai_dsh_client_store = require('@deepseek-ai/dsh-client-store');
 
     //#region src/client/style.js
@@ -180,7 +181,19 @@ window.__ModuleLoader__.load({
       '.m_pool_footerNote{color:var(--dsw-alias-label-secondary);font-size:12px}',
       // The composer-row indicator: a compact two-bar quota capsule that
       // sits beside the model selector.
-      '.m_pool_indicatorHost{display:inline-flex;position:relative;flex:none;align-items:center;height:28px;margin:0 2px;z-index:1}',
+      // The trigger sits OUTSIDE the composer row's flow: it is absolutely
+      // positioned and zero-size, so the input's layout does not change.
+      // The host is out of the flow: absolutely positioned and zero-size,
+      // so the composer row's layout never changes. Its children carry the
+      // pointer events.
+      '.m_pool_indicatorHost{position:absolute;top:0;left:0;width:0;height:0;overflow:visible;pointer-events:none;z-index:1}',
+      // The capsule floats above the model selector. The Host's model trigger
+      // publishes the CSS anchor `--dsh-model-anchor`, so the capsule is
+      // anchored to it without measuring anything.
+      '.m_pool_indicatorTrigger{position:fixed;top:0;left:0;margin:0;pointer-events:auto;appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;width:70px;height:20px;padding:0;border:0;border-radius:var(--dsw-radius-sm);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:inherit;line-height:1;user-select:none;transition:background .14s ease,transform .14s ease}',
+      '.m_pool_indicatorTrigger:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+      '.m_pool_indicatorTrigger:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:1px}',
+      '.m_pool_indicatorTrigger:active{transform:scale(.98)}',
       '.m_pool_indicator{appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;min-width:70px;min-height:28px;padding:0 4px;border:0;border-radius:var(--dsw-radius-sm);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:inherit;line-height:1;user-select:none;transition:background .14s ease,opacity .14s ease,transform .14s ease}',
       '.m_pool_indicator:hover{background:var(--dsw-alias-interactive-bg-hover)}',
       '.m_pool_indicator:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:1px}',
@@ -197,7 +210,10 @@ window.__ModuleLoader__.load({
       '.m_pool_indicatorFillLoading{width:55%;background:linear-gradient(90deg,#7c8cff,#a5b4fc,#7c8cff);background-size:200% 100%;animation:m_pool_indicator_loading 1.4s ease-in-out infinite}',
       '@keyframes m_pool_indicator_loading{0%{background-position:100% 0;opacity:.42}50%{opacity:.9}100%{background-position:0 0;opacity:.42}}',
       // The hover panel: which key is in use, and both windows.
-      '.m_pool_indicatorTip{pointer-events:none;position:absolute;right:0;bottom:calc(100% + 7px);width:296px;box-sizing:border-box;padding:12px 13px 10px;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-lg);background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 14px 34px rgba(0,0,0,.28);z-index:1000;line-height:1.35}',
+      // The panel is portaled to the body, so it is positioned against the
+      // viewport and anchored to the model selector through the CSS anchor
+      // the Host gives that trigger.
+      '.m_pool_indicatorTip{box-sizing:border-box;position:fixed;top:0;left:0;margin:0;width:264px;max-width:min(264px,calc(100vw - 24px));padding:10px 11px 9px;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-panel);background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 14px 34px rgba(0,0,0,.28);z-index:1100;line-height:1.35}',
       '.m_pool_indicatorTipHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}',
       '.m_pool_indicatorTipTitle{font-size:12px;font-weight:700;letter-spacing:-.01em}',
       '.m_pool_indicatorTipSub{margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:10px}',
@@ -213,6 +229,13 @@ window.__ModuleLoader__.load({
       '.m_pool_indicatorMetric{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:10px}',
       '.m_pool_indicatorMetric b{color:var(--dsw-alias-label-primary);font-size:10px;font-weight:700;font-variant-numeric:tabular-nums}',
       '.m_pool_indicatorHint{margin-top:8px;padding-top:7px;border-top:.5px dashed var(--dsw-alias-border-l2);color:var(--dsw-alias-label-tertiary);font-size:9.5px;line-height:1.45}',
+      // The pool list: one compact row per key.
+      '.m_pool_indicatorPool{margin-top:7px;padding-top:6px;border-top:.5px solid var(--dsw-alias-border-l1)}',
+      '.m_pool_indicatorPoolRow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 0}',
+      '.m_pool_indicatorPoolRowActive{color:var(--dsw-alias-state-business-primary)}',
+      '.m_pool_indicatorPoolName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:10px}',
+      '.m_pool_indicatorPoolRowActive .m_pool_indicatorPoolName{color:var(--dsw-alias-state-business-primary)}',
+      '.m_pool_indicatorPoolValue{color:var(--dsw-alias-label-tertiary);font-size:10px;font-variant-numeric:tabular-nums}',
       '.m_pool_spinner{color:var(--dsw-alias-label-tertiary);font-size:12px}',
       '@media (prefers-reduced-motion: reduce){.m_pool_quotaFill,.m_pool_switchThumb,.m_pool_chevron{transition:none}}',
     ].join('');
@@ -260,6 +283,12 @@ window.__ModuleLoader__.load({
       'hint': 'm_pool_hint',
       'iconBtn': 'm_pool_iconBtn',
       'indicator': 'm_pool_indicator',
+      'indicatorPool': 'm_pool_indicatorPool',
+      'indicatorPoolName': 'm_pool_indicatorPoolName',
+      'indicatorPoolRow': 'm_pool_indicatorPoolRow',
+      'indicatorPoolRowActive': 'm_pool_indicatorPoolRowActive',
+      'indicatorPoolValue': 'm_pool_indicatorPoolValue',
+      'indicatorTrigger': 'm_pool_indicatorTrigger',
       'indicatorChip': 'm_pool_indicatorChip',
       'indicatorFill': 'm_pool_indicatorFill',
       'indicatorFillEmpty': 'm_pool_indicatorFillEmpty',
@@ -663,16 +692,14 @@ window.__ModuleLoader__.load({
      */
     function IndicatorPanel(props) {
       const keys = props.keys;
-      return (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorTip, role: 'tooltip', id: props.id,
+      const current = keys.find((entry) => entry.current === true);
+      // The compact body: the key in use, its two windows, and the pool
+      // beside it. Nothing else.
+      return (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorTip, role: 'dialog', id: props.id, style: props.style,
         children: [
           (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorTipHead,
             children: [
-              (0, react_jsx_runtime.jsxs)('div', {
-                children: [
-                  (0, react_jsx_runtime.jsx)('div', { className: s.indicatorTipTitle, children: props.t('indicatorTitle') }),
-                  (0, react_jsx_runtime.jsx)('div', { className: s.indicatorTipSub, children: props.provider }),
-                ],
-              }),
+              (0, react_jsx_runtime.jsx)('span', { className: s.indicatorTipTitle, children: props.t('indicatorTitle') }),
               (0, react_jsx_runtime.jsx)('span', { className: s.indicatorTipLive,
                 children: props.loading ? props.t('indicatorLoading') : props.t('indicatorRefresh'),
               }),
@@ -681,52 +708,85 @@ window.__ModuleLoader__.load({
           props.error !== undefined
             ? (0, react_jsx_runtime.jsx)('div', { className: s.indicatorTipError, children: props.error })
             : null,
-          keys.length === 0 && !props.loading
-            ? (0, react_jsx_runtime.jsx)('div', { className: s.indicatorTipEmpty, children: props.t('indicatorNoPool') })
-            : null,
-          keys.map((entry) => {
-            const active = entry.current === true;
-            const name = entry.name !== '' ? entry.name : entry.ref;
-            return (0, react_jsx_runtime.jsxs)('div', {
-              className: `${s.indicatorKey}${active ? ` ${s.indicatorKeyActive}` : ''}`,
-              key: entry.ref,
+          current !== undefined
+            ? (0, react_jsx_runtime.jsxs)('div', { className: `${s.indicatorKey} ${s.indicatorKeyActive}`,
               children: [
                 (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorKeyHead,
                   children: [
-                    active
-                      ? (0, react_jsx_runtime.jsx)('span', { className: s.indicatorChip, children: props.t('indicatorActiveKey') })
-                      : null,
-                    (0, react_jsx_runtime.jsx)('span', { className: s.indicatorKeyName, children: name }),
+                    (0, react_jsx_runtime.jsx)('span', { className: s.indicatorChip, children: props.t('indicatorActiveKey') }),
+                    (0, react_jsx_runtime.jsx)('span', { className: s.indicatorKeyName,
+                      children: current.name !== '' ? current.name : current.ref,
+                    }),
                   ],
                 }),
-                entry.quotaOk === false
-                  ? (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorMetric,
-                    children: [
-                      (0, react_jsx_runtime.jsx)('span', { children: props.t('indicatorUnavailable') }),
-                      (0, react_jsx_runtime.jsx)('b', { children: '—' }),
-                    ],
-                  })
-                  : null,
                 (0, react_jsx_runtime.jsx)(IndicatorMetric, {
                   label: props.t('indicatorWindowInterval'),
-                  value: entry.intervalRemainingPercent === undefined ? '—' : `${Math.round(entry.intervalRemainingPercent)}%`,
-                  reset: entry.intervalResetAt === undefined
+                  value: current.intervalRemainingPercent === undefined ? '—' : `${Math.round(current.intervalRemainingPercent)}%`,
+                  reset: current.intervalResetAt === undefined
                     ? undefined
-                    : props.t('indicatorResetsIn', { duration: formatDuration(entry.intervalResetAt - Date.now(), props.t) }),
+                    : props.t('indicatorResetsIn', { duration: formatDuration(current.intervalResetAt - Date.now(), props.t) }),
                 }),
                 (0, react_jsx_runtime.jsx)(IndicatorMetric, {
                   label: props.t('indicatorWindowWeekly'),
-                  value: entry.weeklyRemainingPercent === undefined ? '—' : `${Math.round(entry.weeklyRemainingPercent)}%`,
-                  reset: entry.weeklyResetAt === undefined
+                  value: current.weeklyRemainingPercent === undefined ? '—' : `${Math.round(current.weeklyRemainingPercent)}%`,
+                  reset: current.weeklyResetAt === undefined
                     ? undefined
-                    : props.t('indicatorResetsIn', { duration: formatDuration(entry.weeklyResetAt - Date.now(), props.t) }),
+                    : props.t('indicatorResetsIn', { duration: formatDuration(current.weeklyResetAt - Date.now(), props.t) }),
                 }),
               ],
-            });
-          }),
-          (0, react_jsx_runtime.jsx)('div', { className: s.indicatorHint, children: props.t('indicatorRefresh') }),
+            })
+            : null,
+          keys.length > 1
+            ? (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorPool,
+              children: keys.map((entry) => {
+                const active = entry.current === true;
+                const name = entry.name !== '' ? entry.name : entry.ref;
+                return (0, react_jsx_runtime.jsxs)('div', {
+                  className: `${s.indicatorPoolRow}${active ? ` ${s.indicatorPoolRowActive}` : ''}`,
+                  key: entry.ref,
+                  children: [
+                    (0, react_jsx_runtime.jsx)('span', { className: s.indicatorPoolName, children: name }),
+                    (0, react_jsx_runtime.jsx)('span', { className: s.indicatorPoolValue,
+                      children: entry.weeklyRemainingPercent === undefined
+                        ? '—'
+                        : `${Math.round(entry.weeklyRemainingPercent)}%`,
+                    }),
+                  ],
+                });
+              }),
+            })
+            : null,
         ],
       });
+    }
+
+    /**
+     * The rectangle the capsule and the panel are placed at.
+     *
+     * The Host's model trigger publishes a CSS anchor, but the anchor's NAME
+     * is a private detail of that component: it is generated per instance
+     * and no service exposes it. Reaching for it would couple this plugin
+     * to an implementation detail that may change.
+     *
+     * So the capsule measures the model selector instead. The Host renders
+     * the selected model inside a span carrying `data-provider-id`, and the
+     * composer card carries `data-composer-card`; the trigger is the
+     * button that holds that span.
+     *
+     * @returns the rectangle, or undefined when the selector is not found.
+     */
+    function modelSelectorRect() {
+      if (typeof document === 'undefined') return undefined;
+      const card = document.querySelector('[data-composer-card]');
+      if (card === null) return undefined;
+      // The selected model's own mark, then the button that holds it.
+      const marked = card.querySelector('[data-provider-id][data-model-id]');
+      const trigger = marked?.closest('button') ?? card.querySelector('button[aria-haspopup="menu"]');
+      const element = trigger ?? marked;
+      if (element === null || element === undefined) return undefined;
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) return undefined;
+      return rect;
     }
 
     /**
@@ -772,8 +832,9 @@ window.__ModuleLoader__.load({
       const [usage, setUsage] = (0, react.useState)(null);
       const [error, setError] = (0, react.useState)(undefined);
       const [busy, setBusy] = (0, react.useState)(false);
-      const [hovered, setHovered] = (0, react.useState)(false);
+      const [open, setOpen] = (0, react.useState)(false);
       const [focused, setFocused] = (0, react.useState)(false);
+      const [anchor, setAnchor] = (0, react.useState)(undefined);
       const tooltipId = (0, react.useId)();
       const seq = (0, react.useRef)(0);
       // The countdown text is derived from the clock, so a tick re-renders the
@@ -828,6 +889,34 @@ window.__ModuleLoader__.load({
         return () => clearInterval(id);
       }, [provider]);
 
+      // The capsule and the panel are placed against the model selector's
+      // rectangle. The measurement is repeated when the window resizes and
+      // when the composer scrolls, so the capsule follows the selector.
+      (0, react.useEffect)(() => {
+        if (typeof window === 'undefined') return undefined;
+        const measure = () => {
+          const rect = modelSelectorRect();
+          setAnchor((previous) => {
+            if (rect === undefined) return previous;
+            if (previous !== undefined
+              && previous.right === rect.right
+              && previous.top === rect.top) {
+              return previous;
+            }
+            return rect;
+          });
+        };
+        measure();
+        window.addEventListener('resize', measure);
+        window.addEventListener('scroll', measure, true);
+        const id = setInterval(measure, 2000);
+        return () => {
+          window.removeEventListener('resize', measure);
+          window.removeEventListener('scroll', measure, true);
+          clearInterval(id);
+        };
+      }, []);
+
       // The indicator belongs to a pooled provider only. A session on any
       // other route shows nothing at all.
       const pooled = props.pooledProviders();
@@ -853,25 +942,60 @@ window.__ModuleLoader__.load({
             interval: percentText(intervalPercent),
             weekly: percentText(weeklyPercent),
           });
-      const showPanel = hovered || focused;
+      const showPanel = open;
+
+      // The panel's own height, so the placement can put it above the
+      // composer row without covering it.
+      const panelHeight = 96 + (keys.length > 1 ? keys.length * 17 : 0);
+      // The capsule sits just above the model selector; the panel sits a
+      // little higher, so both clear the composer row.
+      const capsuleStyle = anchor === undefined
+        ? { visibility: 'hidden' }
+        : { top: `${Math.max(0, anchor.top - 26)}px`, left: `${Math.max(0, anchor.right - 70)}px` };
+      const panelStyle = anchor === undefined
+        ? { visibility: 'hidden' }
+        : { top: `${Math.max(0, anchor.top - 26 - 8 - panelHeight)}px`, left: `${Math.max(0, anchor.right - 264)}px` };
+
+      // The panel is portaled to the body, the way the Host's own model menu
+      // does it, so no ancestor's overflow clips it.
+      const panel = showPanel
+        ? (0, react_jsx_runtime.jsx)(IndicatorPanel, {
+          id: tooltipId,
+          keys,
+          loading,
+          error: error === undefined ? undefined : t('indicatorError', { message: error }),
+          provider,
+          t,
+          style: panelStyle,
+        })
+        : null;
 
       return (0, react_jsx_runtime.jsxs)('span', {
         className: s.indicatorHost,
         'data-multi-key-rotation': 'true',
         'data-multi-key-rotation-provider': provider,
-        onMouseEnter: () => setHovered(true),
-        onMouseLeave: () => setHovered(false),
         children: [
+          // The trigger is fixed and zero-footprint: the composer row's
+          // layout never changes.
           (0, react_jsx_runtime.jsx)('button', {
             type: 'button',
-            className: s.indicator,
+            className: s.indicatorTrigger,
+            style: capsuleStyle,
             'aria-label': summary,
             'aria-busy': busy ? 'true' : 'false',
-            'aria-describedby': showPanel ? tooltipId : undefined,
+            'aria-haspopup': 'dialog',
+            'aria-expanded': showPanel,
+            'aria-controls': showPanel ? tooltipId : undefined,
             title: summary,
-            onClick: () => { void load(true); },
+            onClick: () => { setOpen((value) => !value); void load(true); },
             onFocus: () => setFocused(true),
             onBlur: () => setFocused(false),
+            onKeyDown: (event) => {
+              if (event.key === 'Escape') {
+                setOpen(false);
+                event.stopPropagation();
+              }
+            },
             children: (0, react_jsx_runtime.jsxs)('span', { className: s.indicatorRows,
               children: [
                 (0, react_jsx_runtime.jsx)(IndicatorBar, {
@@ -887,16 +1011,11 @@ window.__ModuleLoader__.load({
               ],
             }),
           }),
-          showPanel
-            ? (0, react_jsx_runtime.jsx)(IndicatorPanel, {
-              id: tooltipId,
-              keys,
-              loading,
-              error: error === undefined ? undefined : t('indicatorError', { message: error }),
-              provider,
-              t,
-            })
-            : null,
+          // The portal needs a document. A profile without one shows
+          // the capsule but no panel.
+          panel === null || typeof document === 'undefined'
+            ? null
+            : (0, react_dom.createPortal)(panel, document.body),
         ],
       });
     }
@@ -2325,10 +2444,14 @@ window.__ModuleLoader__.load({
       // indicator simply never appears.
       ctx.inject(['modelDirectories'], (scoped) => {
         if (scoped?.modelDirectories === undefined) return;
-        ctx.slots.inject('conversation.input.right', () => ctx.slots.register({
-          name: 'conversation.input.right',
+        // The floating overlay slot: its purpose is "floating entries
+        // rendered inside the resident composer card", and a fixed overlay
+        // portals to the document body. The trigger is zero-size, so the
+        // composer row's layout does not change.
+        ctx.slots.inject('conversation.input.overlay', () => ctx.slots.register({
+          name: 'conversation.input.overlay',
           id: 'multi-key-rotation-usage',
-          order: 30,
+          order: 3,
           label: () => t('indicatorTitle'),
           locale: LOCALE_NS,
           inject: (sessionId) => ({

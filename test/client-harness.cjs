@@ -14,6 +14,50 @@ const fs = require('node:fs')
 const path = require('node:path')
 const Module = require('node:module')
 
+// The indicator portals its panel into `document.body`, so the harness
+// supplies a minimal document. The browser owns the portal's placement; a
+// test only needs the target to exist.
+if (typeof globalThis.document === 'undefined') {
+  const head = { children: [], appendChild(node) { this.children.push(node) } }
+
+  // The composer card with the model selector inside it, mirroring what the
+  // Host renders. The selector's rectangle is what the indicator measures.
+  const modelMark = {
+    dataset: {},
+    attributes: { 'data-provider-id': 'minimax-cn', 'data-model-id': 'MiniMax-M3' },
+    getAttribute(name) { return this.attributes[name] },
+    closest() { return modelTrigger },
+  }
+  const modelTrigger = {
+    dataset: {},
+    attributes: { 'aria-haspopup': 'menu' },
+    getAttribute(name) { return this.attributes[name] },
+    getBoundingClientRect: () => ({ top: 700, right: 900, bottom: 728, left: 830, width: 70, height: 28 }),
+    querySelector: () => modelMark,
+  }
+  const composerCard = {
+    dataset: {},
+    querySelector: (selector) => {
+      if (selector === '[data-provider-id][data-model-id]') return modelMark
+      if (selector.includes('button')) return modelTrigger
+      return null
+    },
+  }
+
+  globalThis.document = {
+    head,
+    body: { appendChild() {}, removeChild() {} },
+    createElement: () => ({ dataset: {}, setAttribute() {}, style: {} }),
+    querySelector: (selector) => (selector === '[data-composer-card]' ? composerCard : null),
+    querySelectorAll: () => [],
+  }
+
+  globalThis.window = {
+    addEventListener() {},
+    removeEventListener() {},
+  }
+}
+
 const CLIENT = path.resolve(__dirname, '..', 'client.js')
 
 /**
@@ -125,6 +169,19 @@ function makeReact() {
     },
   }
   return react
+}
+
+/**
+ * The `react-dom` stand-in.
+ *
+ * The indicator portals its panel into `document.body`. The mock returns the
+ * element itself, so a test still sees the panel's tree; what it cannot see
+ * is the portal's placement, which the browser owns.
+ */
+function makeReactDom() {
+  return {
+    createPortal: (element) => element,
+  }
 }
 
 /** Build the jsx-runtime stand-in. */
@@ -371,6 +428,8 @@ function makeContext() {
     }),
   }
 
+  const reactDom = makeReactDom()
+
   const ctx = {
     effect: (fn) => {
       const disposer = fn()
@@ -381,6 +440,7 @@ function makeContext() {
     slots,
     remote,
     modelDirectories,
+    'react-dom': reactDom,
     // The Cordis fibre inject. The mock answers with a scope holding the
     // services it was asked for, so a plugin that takes an optional service
     // behaves the way it does in a profile that serves it.
@@ -394,7 +454,7 @@ function makeContext() {
     },
     logger: { error: (...args) => console.error(...args), warn: () => {}, info: () => {} },
   }
-  return { ctx, registered, react, jsxRuntime, localeDict, served, modelDirectories }
+  return { ctx, registered, react, jsxRuntime, localeDict, served, modelDirectories, reactDom }
 }
 
 /**
@@ -402,26 +462,40 @@ function makeContext() {
  * @returns the module exports.
  */
 function loadClient() {
-  const { ctx, registered, react, jsxRuntime, served, localeDict } = makeContext()
+  const { ctx, registered, react, jsxRuntime, served, localeDict, reactDom } = makeContext()
   const originalLoad = Module._load
   Module._load = function patched(request, parent, isMain) {
     if (request === 'react') return react
     if (request === 'react/jsx-runtime') return jsxRuntime
     if (request === '@deepseek-ai/dsh-client-store') return { createSnapshotStore }
+    if (request === 'react-dom') return reactDom
     return originalLoad.call(this, request, parent, isMain)
   }
   try {
     const code = fs.readFileSync(CLIENT, 'utf8')
-    const sandbox = { window: { __ModuleLoader__: { load: (spec) => { sandbox.__loaderId = spec.id; sandbox.__result = spec.factory(requireShim) } } } }
+    // The plugin's `window` is this sandbox object, so it must carry the
+    // browser globals the plugin reaches for. In a browser the sandbox window
+    // and the global window are the same thing.
+    const sandbox = {
+      window: {
+        __ModuleLoader__: { load: (spec) => { sandbox.__loaderId = spec.id; sandbox.__result = spec.factory(requireShim) } },
+        document: globalThis.document,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        setInterval: globalThis.setInterval,
+        clearInterval: globalThis.clearInterval,
+      },
+    }
     const requireShim = (name) => {
       if (name === 'react') return react
       if (name === 'react/jsx-runtime') return jsxRuntime
       if (name === '@deepseek-ai/dsh-client-store') return { createSnapshotStore }
+      if (name === 'react-dom') return reactDom
       throw new Error(`unexpected require("${name}")`)
     }
     // eslint-disable-next-line no-new-func
     new Function('window', 'require', 'module', 'exports', code)(sandbox.window, requireShim, sandbox, sandbox.__result)
-    return { sandbox, registered, ctx, react, jsxRuntime, served, localeDict }
+    return { sandbox, registered, ctx, react, jsxRuntime, served, localeDict, reactDom }
   } finally {
     Module._load = originalLoad
   }
