@@ -688,7 +688,7 @@ test('the key list is ordered by the weekly remaining time', async () => {
  * @returns the registration row.
  */
 function indicatorEntry(harness) {
-  const entry = harness.registered.find((row) => row.options.name === 'conversation.input.overlay')
+  const entry = harness.registered.find((row) => row.options.name === 'conversation.input.right')
   assert.notEqual(entry, undefined)
   return entry
 }
@@ -699,7 +699,7 @@ function indicatorEntry(harness) {
  * @param sessionId - the session the indicator belongs to.
  * @returns the rendered element tree.
  */
-async function renderIndicator(harness, sessionId) {
+async function renderIndicator(harness, sessionId, open) {
   const entry = indicatorEntry(harness)
   const face = entry.options.inject(sessionId ?? 'session-1')
   const t = (key, params) => {
@@ -713,11 +713,11 @@ async function renderIndicator(harness, sessionId) {
   await settle()
   await settle()
   tree = render()
-  if (harness.openIndicator) {
-    // The panel opens on a click, the way a user opens it. It is clicked
-    // once: a second click would close the panel again.
-    const trigger = byClass(tree, 'm_pool_indicatorTrigger')[0]
-    if (trigger !== undefined) trigger.props.onClick()
+  if (open === true || harness.openIndicator) {
+    // The panel opens on hover, the way a user opens it: the pointer
+    // enters the host. It is entered once: leaving would close it again.
+    const host = byClass(tree, 'm_pool_indicatorHost')[0]
+    if (host !== undefined) host.props.onMouseEnter()
     tree = render()
   }
   return tree
@@ -740,10 +740,10 @@ function pooledProfile() {
   }
 }
 
-test('the indicator registers one cell of the floating composer overlay', () => {
-  // `conversation.input.overlay` holds the floating entries of the composer
-  // card, and a fixed overlay portals to the document body. A fresh id adds a
-  // cell beside the shipped ones instead of replacing one.
+test('the indicator registers one cell of the composer tool row', () => {
+  // The tool row's right cell is rendered in the same flex row as the model
+  // selector, immediately before it. A fresh id adds a cell beside the
+  // shipped ones instead of replacing one.
   const harness = boot()
   const entry = indicatorEntry(harness)
   assert.equal(entry.options.id, 'multi-key-rotation-usage')
@@ -751,22 +751,19 @@ test('the indicator registers one cell of the floating composer overlay', () => 
   assert.equal(typeof entry.component, 'function')
 })
 
-test('the indicator does not occupy a cell of the composer tool row', () => {
-  // The tool row is a fixed layout: a cell there changes the input's
-  // geometry. The indicator must not take one.
+test('the indicator does not occupy a cell of the floating composer overlay', () => {
+  // The overlay slot holds floating entries; the indicator belongs in the
+  // row, so the overlay stays empty.
   const harness = boot()
-  const row = harness.registered.find((r) => r.options.name === 'conversation.input.right')
+  const row = harness.registered.find((r) => r.options.name === 'conversation.input.overlay')
   assert.equal(row, undefined)
 })
 
-test('the indicator trigger is portaled to the document body', async () => {
-  // The composer's seat carries `will-change: transform`, which makes it a
-  // containing block for `position: fixed` descendants. A trigger left
-  // inside the composer would therefore resolve its top/left against the
-  // seat's box while the values are measured in viewport coordinates, and
-  // the capsule would land off-screen. The Host's own composer overlays
-  // portal to the document body for exactly this reason, so the trigger
-  // goes there too.
+test('the indicator trigger renders inline in the composer row', async () => {
+  // The trigger is an ordinary inline element in the tool row, next to the
+  // model selector. It must NOT be portaled: the composer's seat carries
+  // `will-change: transform`, and a fixed descendant would resolve its
+  // offsets against that seat instead of the viewport.
   const restore = stubFetch()
   calls.profile = pooledProfile()
   try {
@@ -774,20 +771,63 @@ test('the indicator trigger is portaled to the document body', async () => {
     await settle()
     const tree = await renderIndicator(harness)
 
-    const portals = harness.reactDom.portals
-    assert.ok(portals.length > 0, 'the indicator rendered no portal')
-    for (const portal of portals) {
-      assert.equal(portal.target, globalThis.document.body)
-    }
-
-    // The trigger must live in a portal, not inside the in-flow host span
-    // that sits in the composer.
+    // The trigger lives inside the in-flow host span.
     const host = byClass(tree, 'm_pool_indicatorHost')[0]
     assert.notEqual(host, undefined)
-    assert.equal(byClass(host, 'm_pool_indicatorTrigger').length, 0)
+    assert.equal(byClass(host, 'm_pool_indicatorTrigger').length, 1)
 
-    // And the trigger exists at all.
-    assert.equal(byClass(tree, 'm_pool_indicatorTrigger').length, 1)
+    // And it is not positioned: the trigger carries no inline position
+    // style at all, so the row's own layout places it.
+    const trigger = byClass(host, 'm_pool_indicatorTrigger')[0]
+    assert.equal(trigger.props.style, undefined)
+
+    // Nothing is portaled at all: the panel is absolutely positioned
+    // inside the host, which is its containing block.
+    assert.equal(harness.reactDom.portals.length, 0)
+  } finally {
+    calls.profile = pooledProfile()
+    restore()
+  }
+})
+
+test('the indicator panel opens inside the inline host', async () => {
+  // The panel is an absolutely positioned child of the inline host, so it
+  // opens above the capsule without a portal and without any measurement.
+  const restore = stubFetch()
+  calls.profile = pooledProfile()
+  try {
+    const harness = boot()
+    await settle()
+    const tree = await renderIndicator(harness, 'session-1', true)
+
+    const host = byClass(tree, 'm_pool_indicatorHost')[0]
+    assert.notEqual(host, undefined)
+    assert.equal(byClass(host, 'm_pool_indicatorTip').length, 1)
+    assert.equal(harness.reactDom.portals.length, 0)
+  } finally {
+    calls.profile = pooledProfile()
+    restore()
+  }
+})
+
+test('the indicator panel closes when the pointer leaves the host', async () => {
+  // The panel is a hover panel. Leaving the host has to close it, or it
+  // would stay open over the composer row forever.
+  const restore = stubFetch()
+  calls.profile = pooledProfile()
+  try {
+    const harness = boot()
+    await settle()
+    const open = await renderIndicator(harness, 'session-1', true)
+    assert.equal(byClass(open, 'm_pool_indicatorTip').length, 1)
+
+    const host = byClass(open, 'm_pool_indicatorHost')[0]
+    host.props.onMouseLeave()
+    const closed = renderTree(harness.react, indicatorEntry(harness).component, {
+      ...indicatorEntry(harness).options.inject('session-1'),
+      t: (key) => key,
+    })
+    assert.equal(byClass(closed, 'm_pool_indicatorTip').length, 0)
   } finally {
     calls.profile = pooledProfile()
     restore()

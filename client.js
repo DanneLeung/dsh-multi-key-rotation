@@ -55,7 +55,6 @@ window.__ModuleLoader__.load({
     Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
     const react = require('react');
     const react_jsx_runtime = require('react/jsx-runtime');
-    const react_dom = require('react-dom');
     const _deepseek_ai_dsh_client_store = require('@deepseek-ai/dsh-client-store');
 
     //#region src/client/style.js
@@ -180,17 +179,15 @@ window.__ModuleLoader__.load({
       '.m_pool_footer{align-items:center;gap:10px;flex-wrap:wrap;display:flex}',
       '.m_pool_footerNote{color:var(--dsw-alias-label-secondary);font-size:12px}',
       // The composer-row indicator: a compact two-bar quota capsule that
-      // sits beside the model selector.
-      // The trigger sits OUTSIDE the composer row's flow: it is absolutely
-      // positioned and zero-size, so the input's layout does not change.
-      // The host is out of the flow: absolutely positioned and zero-size,
-      // so the composer row's layout never changes. Its children carry the
-      // pointer events.
-      '.m_pool_indicatorHost{display:contents}',
-      // The capsule floats above the model selector. The Host's model trigger
-      // publishes the CSS anchor `--dsh-model-anchor`, so the capsule is
-      // anchored to it without measuring anything.
-      '.m_pool_indicatorTrigger{position:fixed;top:0;left:0;margin:0;z-index:1100;pointer-events:auto;appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;width:70px;height:20px;padding:0;border:0;border-radius:var(--dsw-radius-sm);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:inherit;line-height:1;user-select:none;transition:background .14s ease,transform .14s ease}',
+      // sits in the composer tool row, immediately before the model
+      // selector. The row already lays out this cell, so the capsule is an
+      // ordinary inline-flex item: it takes the row's own height and adds
+      // nothing to the row's box.
+      '.m_pool_indicatorHost{display:inline-flex;position:relative;flex:none;align-items:center;height:28px;margin:0 2px;z-index:1}',
+      // The capsule is a plain inline button. It is NOT positioned: fixed,
+      // because the composer's seat carries `will-change: transform` and a
+      // fixed descendant would resolve its offsets against that seat.
+      '.m_pool_indicatorTrigger{appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;width:70px;min-height:28px;margin:0;padding:0;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:inherit;line-height:1;user-select:none;transition:background .14s ease,transform .14s ease}',
       '.m_pool_indicatorTrigger:hover{background:var(--dsw-alias-interactive-bg-hover)}',
       '.m_pool_indicatorTrigger:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:1px}',
       '.m_pool_indicatorTrigger:active{transform:scale(.98)}',
@@ -210,10 +207,10 @@ window.__ModuleLoader__.load({
       '.m_pool_indicatorFillLoading{width:55%;background:linear-gradient(90deg,#7c8cff,#a5b4fc,#7c8cff);background-size:200% 100%;animation:m_pool_indicator_loading 1.4s ease-in-out infinite}',
       '@keyframes m_pool_indicator_loading{0%{background-position:100% 0;opacity:.42}50%{opacity:.9}100%{background-position:0 0;opacity:.42}}',
       // The hover panel: which key is in use, and both windows.
-      // The panel is portaled to the body, so it is positioned against the
-      // viewport and anchored to the model selector through the CSS anchor
-      // the Host gives that trigger.
-      '.m_pool_indicatorTip{box-sizing:border-box;position:fixed;top:0;left:0;margin:0;width:264px;max-width:min(264px,calc(100vw - 24px));padding:10px 11px 9px;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-panel);background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 14px 34px rgba(0,0,0,.28);z-index:1100;line-height:1.35}',
+      // The panel is absolutely positioned inside the inline host, which is
+      // its containing block, so it opens above the capsule without a
+      // portal and without any measurement.
+      '.m_pool_indicatorTip{pointer-events:none;box-sizing:border-box;position:absolute;right:0;bottom:calc(100% + 7px);width:264px;max-width:min(264px,calc(100vw - 24px));margin:0;padding:10px 11px 9px;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-panel);background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 14px 34px rgba(0,0,0,.28);z-index:1000;line-height:1.35}',
       '.m_pool_indicatorTipHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}',
       '.m_pool_indicatorTipTitle{font-size:12px;font-weight:700;letter-spacing:-.01em}',
       '.m_pool_indicatorTipSub{margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:10px}',
@@ -695,7 +692,7 @@ window.__ModuleLoader__.load({
       const current = keys.find((entry) => entry.current === true);
       // The compact body: the key in use, its two windows, and the pool
       // beside it. Nothing else.
-      return (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorTip, role: 'dialog', id: props.id, style: props.style,
+      return (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorTip, role: 'dialog', id: props.id,
         children: [
           (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorTipHead,
             children: [
@@ -761,35 +758,6 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The rectangle the capsule and the panel are placed at.
-     *
-     * The Host's model trigger publishes a CSS anchor, but the anchor's NAME
-     * is a private detail of that component: it is generated per instance
-     * and no service exposes it. Reaching for it would couple this plugin
-     * to an implementation detail that may change.
-     *
-     * So the capsule measures the model selector instead. The Host renders
-     * the selected model inside a span carrying `data-provider-id`, and the
-     * composer card carries `data-composer-card`; the trigger is the
-     * button that holds that span.
-     *
-     * @returns the rectangle, or undefined when the selector is not found.
-     */
-    function modelSelectorRect() {
-      if (typeof document === 'undefined') return undefined;
-      const card = document.querySelector('[data-composer-card]');
-      if (card === null) return undefined;
-      // The selected model's own mark, then the button that holds it.
-      const marked = card.querySelector('[data-provider-id][data-model-id]');
-      const trigger = marked?.closest('button') ?? card.querySelector('button[aria-haspopup="menu"]');
-      const element = trigger ?? marked;
-      if (element === null || element === undefined) return undefined;
-      const rect = element.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0) return undefined;
-      return rect;
-    }
-
-    /**
      * The session's model directory.
      *
      * `directoryFor` throws when the session resolves no scope or no
@@ -832,9 +800,12 @@ window.__ModuleLoader__.load({
       const [usage, setUsage] = (0, react.useState)(null);
       const [error, setError] = (0, react.useState)(undefined);
       const [busy, setBusy] = (0, react.useState)(false);
-      const [open, setOpen] = (0, react.useState)(false);
+      // The panel is a hover panel: it shows while the pointer is over the
+      // host, and while the trigger holds the focus. The pointer handlers
+      // live on the host, so moving onto the panel keeps it open and
+      // moving away closes it.
+      const [hovered, setHovered] = (0, react.useState)(false);
       const [focused, setFocused] = (0, react.useState)(false);
-      const [anchor, setAnchor] = (0, react.useState)(undefined);
       const tooltipId = (0, react.useId)();
       const seq = (0, react.useRef)(0);
       // The countdown text is derived from the clock, so a tick re-renders the
@@ -889,34 +860,6 @@ window.__ModuleLoader__.load({
         return () => clearInterval(id);
       }, [provider]);
 
-      // The capsule and the panel are placed against the model selector's
-      // rectangle. The measurement is repeated when the window resizes and
-      // when the composer scrolls, so the capsule follows the selector.
-      (0, react.useEffect)(() => {
-        if (typeof window === 'undefined') return undefined;
-        const measure = () => {
-          const rect = modelSelectorRect();
-          setAnchor((previous) => {
-            if (rect === undefined) return previous;
-            if (previous !== undefined
-              && previous.right === rect.right
-              && previous.top === rect.top) {
-              return previous;
-            }
-            return rect;
-          });
-        };
-        measure();
-        window.addEventListener('resize', measure);
-        window.addEventListener('scroll', measure, true);
-        const id = setInterval(measure, 2000);
-        return () => {
-          window.removeEventListener('resize', measure);
-          window.removeEventListener('scroll', measure, true);
-          clearInterval(id);
-        };
-      }, []);
-
       // The indicator belongs to a pooled provider only. A session on any
       // other route shows nothing at all.
       const pooled = props.pooledProviders();
@@ -942,22 +885,10 @@ window.__ModuleLoader__.load({
             interval: percentText(intervalPercent),
             weekly: percentText(weeklyPercent),
           });
-      const showPanel = open;
+      const showPanel = hovered || focused;
 
-      // The panel's own height, so the placement can put it above the
-      // composer row without covering it.
-      const panelHeight = 96 + (keys.length > 1 ? keys.length * 17 : 0);
-      // The capsule sits just above the model selector; the panel sits a
-      // little higher, so both clear the composer row.
-      const capsuleStyle = anchor === undefined
-        ? { visibility: 'hidden' }
-        : { top: `${Math.max(0, anchor.top - 26)}px`, left: `${Math.max(0, anchor.right - 70)}px` };
-      const panelStyle = anchor === undefined
-        ? { visibility: 'hidden' }
-        : { top: `${Math.max(0, anchor.top - 26 - 8 - panelHeight)}px`, left: `${Math.max(0, anchor.right - 264)}px` };
-
-      // The panel is portaled to the body, the way the Host's own model menu
-      // does it, so no ancestor's overflow clips it.
+      // The panel is an absolutely positioned child of the inline host, so
+      // the host's own box places it: no portal, no measurement.
       const panel = showPanel
         ? (0, react_jsx_runtime.jsx)(IndicatorPanel, {
           id: tooltipId,
@@ -966,35 +897,28 @@ window.__ModuleLoader__.load({
           error: error === undefined ? undefined : t('indicatorError', { message: error }),
           provider,
           t,
-          style: panelStyle,
         })
         : null;
 
-      // The trigger is portaled as well, and that is not cosmetic.
-      //
-      // The composer's seat carries `will-change: transform`, which makes it
-      // a containing block for `position: fixed` descendants. A trigger left
-      // inside the composer would resolve its `top`/`left` against the
-      // seat's box while the values are measured in viewport coordinates, so
-      // the capsule would land far off-screen. Portaling to the body puts the
-      // trigger outside that containing block, and `position: fixed` resolves
-      // against the viewport again.
+      // The trigger is an ordinary inline element in the composer row. The
+      // panel is absolutely positioned inside the host, which is its
+      // containing block, so nothing has to be portaled or measured.
       const trigger = (0, react_jsx_runtime.jsx)('button', {
         type: 'button',
         className: s.indicatorTrigger,
-        style: capsuleStyle,
         'aria-label': summary,
         'aria-busy': busy ? 'true' : 'false',
         'aria-haspopup': 'dialog',
         'aria-expanded': showPanel,
-        'aria-controls': showPanel ? tooltipId : undefined,
+        'aria-describedby': showPanel ? tooltipId : undefined,
         title: summary,
-        onClick: () => { setOpen((value) => !value); void load(true); },
+        onClick: () => { void load(true); },
         onFocus: () => setFocused(true),
         onBlur: () => setFocused(false),
         onKeyDown: (event) => {
           if (event.key === 'Escape') {
-            setOpen(false);
+            setHovered(false);
+            setFocused(false);
             event.stopPropagation();
           }
         },
@@ -1014,24 +938,16 @@ window.__ModuleLoader__.load({
         }),
       });
 
-      // The in-flow host carries the data attributes and keeps the slot
-      // occupied, but it renders nothing: the trigger and the panel both
-      // live in the body.
+      // The host carries the data attributes, keeps the slot occupied, is
+      // the containing block of the panel, and owns the pointer handlers
+      // that open and close it.
       return (0, react_jsx_runtime.jsxs)('span', {
         className: s.indicatorHost,
         'data-multi-key-rotation': 'true',
         'data-multi-key-rotation-provider': provider,
-        children: typeof document === 'undefined'
-          ? null
-          : (0, react_dom.createPortal)(
-            (0, react_jsx_runtime.jsxs)(react.Fragment, {
-              children: [
-                trigger,
-                panel,
-              ],
-            }),
-            document.body,
-          ),
+        onMouseEnter: () => setHovered(true),
+        onMouseLeave: () => setHovered(false),
+        children: [trigger, panel],
       });
     }
     //#endregion
@@ -2459,12 +2375,12 @@ window.__ModuleLoader__.load({
       // indicator simply never appears.
       ctx.inject(['modelDirectories'], (scoped) => {
         if (scoped?.modelDirectories === undefined) return;
-        // The floating overlay slot: its purpose is "floating entries
-        // rendered inside the resident composer card", and a fixed overlay
-        // portals to the document body. The trigger is zero-size, so the
-        // composer row's layout does not change.
-        ctx.slots.inject('conversation.input.overlay', () => ctx.slots.register({
-          name: 'conversation.input.overlay',
+        // The composer tool row's right cell: the Host renders it in the
+        // same flex row as the model selector, immediately before it.
+        // The cell is allocated by the row itself, so the indicator needs
+        // no measurement and no positioning of its own.
+        ctx.slots.inject('conversation.input.right', () => ctx.slots.register({
+          name: 'conversation.input.right',
           id: 'multi-key-rotation-usage',
           order: 3,
           label: () => t('indicatorTitle'),

@@ -55,6 +55,8 @@ if (typeof globalThis.document === 'undefined') {
   globalThis.window = {
     addEventListener() {},
     removeEventListener() {},
+    innerWidth: 1200,
+    innerHeight: 800,
   }
 }
 
@@ -246,6 +248,16 @@ function flatten(node, react, path) {
     const key = `${node.type.name || 'Component'}@${path}`
     react.__enter(key)
     return flatten(node.type(node.props), react, path)
+  }
+  // A host element with a ref: React sets `ref.current` to the DOM node, so
+  // the harness hands the element a box the component can measure.
+  if (node.props?.ref !== undefined && node.props.ref !== null) {
+    const ref = node.props.ref
+    if (typeof ref === 'object') {
+      ref.current = {
+        getBoundingClientRect: () => ({ top: 700, right: 830, bottom: 720, left: 760, width: 70, height: 20 }),
+      }
+    }
   }
   return { type: node.type, props: { ...node.props, children: flatten(node.props?.children, react, `${path}/c`) } }
 }

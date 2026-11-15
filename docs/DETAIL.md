@@ -139,22 +139,28 @@ gated registration never appears, and the page is simply absent.
 
 ## The composer indicator
 
-The capsule above the model selector is the plugin's second slot entry. It is
-a **popup**: it floats over the composer and never takes a cell in the input
-row, so the input's layout does not change.
+The quota capsule beside the model selector is the plugin's second slot
+entry. It is a **popup**: the capsule itself is a compact two-bar readout,
+and the details open in a panel above it.
 
 ### The slot
 
-`conversation.input.overlay` is the list slot for "floating entries rendered
-inside the resident composer card". Its purpose also says that a fixed
-overlay must **portal to the document body**, because the docked composer
-contains the card. It is a **list** slot: a **fresh `id`** adds a cell
-beside the shipped ones, while reusing a shipped id would *replace* that
-cell. The plugin registers under `multi-key-rotation-usage`.
+`conversation.input.right` is the list slot for "compact controls before the
+composer submit action". The Host renders it in the same flex row as the
+model selector, **immediately before it**:
 
-`conversation.input.right` — the composer tool row — is deliberately **not**
-used. A cell there is a fixed part of the row's layout, so taking one changes
-the input's geometry.
+> `renderSlot('conversation.input.right')`, then
+> `renderSlot('conversation.input.model')`, inside one flex row with
+> `align-items: center` and a 12px gap.
+
+So a cell in that slot lands exactly where the capsule is wanted: on the
+same row, in front of the model dropdown. It is a **list** slot: a **fresh
+`id`** adds a cell beside the shipped ones, while reusing a shipped id would
+*replace* that cell. The plugin registers under `multi-key-rotation-usage`.
+
+The slot allocates the space: the row lays it out, so the capsule needs no
+positioning of its own and the input's geometry is the Host's business, not
+the plugin's.
 
 The slot entry is **session-scoped**, so each session gets its own instance
 and its own model selection.
@@ -195,37 +201,39 @@ capsule receives only the remaining shares and the reset moments.
 
 ### Placement
 
-The capsule is placed against the model selector's own rectangle, which the
-browser measures:
+The capsule is an ordinary inline-flex item in the tool row. The panel is
+**absolutely positioned inside the same host**, and the host is
+`position: relative`:
 
-- the Host's model trigger publishes a CSS anchor (`--dsh-model-anchor`),
-  but the anchor's *name* is a private detail of that component — it is
-  generated per instance and no service exposes it. Reaching for it would
-  couple this plugin to an implementation detail that may change;
-- so the capsule measures instead. The Host renders the selected model inside
-  a span carrying `data-provider-id` and `data-model-id`, and the composer
-  card carries `data-composer-card`;
-- the measurement is repeated on resize and on scroll, and on a slow tick, so
-  the capsule follows the selector.
+> `.m_pool_indicatorHost { display: inline-flex; position: relative; … }`
+> `.m_pool_indicatorTip { position: absolute; right: 0; bottom: calc(100% + 7px); }`
 
-Neither the capsule nor the panel takes any space in the composer row, and
-**both are portaled into `document.body`**.
+The host is therefore the panel's **containing block**, and the panel opens
+above the capsule with no measurement, no portal and no fixed positioning.
 
-The portal is not cosmetic. The composer's seat carries
-`will-change: transform`, which makes it a *containing block* for
-`position: fixed` descendants. A capsule left inside the composer would
-resolve its `top`/`left` against that seat's box, while the values are
-measured in viewport coordinates — so it would land far off-screen and the
-indicator would be invisible. Portaling to the body puts the capsule outside
-that containing block, and `position: fixed` resolves against the viewport
-again. The Host's own composer overlays (the slash menu, the command popup)
-portal for exactly the same reason, and the slot's own description says so:
+This matters because the composer's seat carries `will-change: transform`,
+which makes it a *containing block* for `position: fixed` descendants. An
+indicator that measured the model selector and positioned itself with
+`position: fixed` would resolve its `top`/`left` against that seat's box
+while the values are viewport coordinates — so it would land far off-screen
+and the indicator would be invisible. The absolute positioning inside a
+relative host avoids the whole trap: the offsets are resolved against a box
+the plugin owns.
 
-> Floating entries rendered inside the resident composer card; fixed overlays
-> must portal to the document body because the docked composer contains them.
+Nothing is measured and nothing is portaled, so the plugin never reads the
+Host's DOM to estimate a position. The row owns the layout, and the host
+owns the panel's placement.
 
-The in-flow span that occupies the slot keeps the data attributes and holds
-no box; it renders nothing.
+### Opening and closing
+
+The panel is a **hover panel**: it shows while the pointer is over the host,
+and while the trigger holds the focus. The mouse handlers live on the host
+rather than on the button, so moving the pointer onto the panel keeps it
+open and moving away closes it. The panel itself is `pointer-events: none`,
+so it never swallows the pointer.
+
+A click refreshes the reading instead of toggling the panel. `Escape` closes
+the panel and stops the event, so the key does not also reach the composer.
 
 ### The list of pooled providers
 
