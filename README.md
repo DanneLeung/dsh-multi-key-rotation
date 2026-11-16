@@ -9,6 +9,8 @@
 [![DeepSeek Harness](https://img.shields.io/badge/deepseek--harness-v0.2.2--rc.3-263146?style=flat-square)](https://github.com/deepseek-ai/deepseek-harness)
 [![License: MIT](https://img.shields.io/badge/license-MIT-263146?style=flat-square)](LICENSE)
 
+![The Multi-Key Rotation card in the Plugins settings section, with three named MiniMax Token Plan keys and their remaining quota for the 5-hour and weekly windows](docs/images/settings.png)
+
 ---
 
 ## Scope of this release
@@ -157,6 +159,8 @@ set of runtime identities.
 tab of the built-in Plugins settings section, beside the shipped **Plugin
 list** tab. Every MiniMax route that has keys gets one card.
 
+![The Multi-Key Rotation card, with three named keys, their remaining quota, the key in use, and the switching policy below](docs/images/settings.png)
+
 1. Open a provider's card.
 2. Add keys. Give a key a name and paste its value, then press **Add key**;
    or press **Add several at once** and paste one key per line.
@@ -229,12 +233,16 @@ small capsule with two bars:
 - **5h** — the remaining share of the 5-hour window of the key in use
 - **7d** — the remaining share of the weekly window of the same key
 
+![The indicator's capsule in the composer row, with its two bars, right in front of the model selector](docs/images/capsule.png)
+
 The bars are colored by the remaining share: green while it is healthy, amber
 under 20%, red at zero.
 
 Hover the capsule to open a panel. Its heading names the plan the figures
 belong to — **MiniMax Token Plan** — and below it the panel lists **every key
 of the pool**, one row per key, with two lines per row:
+
+![The hover panel, listing every key of the pool with its two windows, the key in use highlighted](docs/images/panel.png)
 
 ```
 MiniMax Token Plan

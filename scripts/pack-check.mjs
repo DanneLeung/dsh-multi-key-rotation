@@ -127,7 +127,10 @@ try {
     }
   }
 
-  // Every file must be clean UTF-8 without a BOM or a NUL byte.
+  // Every TEXT file must be clean UTF-8 without a BOM or a NUL byte. The
+  // pictures the documentation embeds are binary, and a PNG is not supposed
+  // to decode as text — so they are checked for the PNG signature instead,
+  // which is what tells a picture from a text file that went wrong.
   const unpacked = join(work, 'unpacked')
   execFileSync('tar', ['-xzf', tarballPath, '-C', work])
   for (const entry of entries) {
@@ -140,6 +143,14 @@ try {
       failed = true
       continue
     }
+    if (bytes.length === 0) {
+      console.error(`EMPTY file: ${entry}`)
+      failed = true
+      continue
+    }
+    // A picture: the PNG signature, and nothing else is checked.
+    const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+    if (isPng) continue
     if (bytes.includes(0)) {
       console.error(`NUL byte in ${entry}`)
       failed = true

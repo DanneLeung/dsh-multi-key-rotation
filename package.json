@@ -1,7 +1,7 @@
 {
   "name": "@danneleung/dsh-multi-key-rotation",
   "version": "1.0.0",
-  "description": "Give one LLM provider several named API keys and let the plugin rotate between them by remaining quota, with a quota-aware settings tab for DeepSeek Harness.",
+  "description": "Give a MiniMax Token Plan route several named API keys and let the plugin rotate between them by remaining quota, with a quota-aware settings tab for DeepSeek Harness.",
   "license": "MIT",
   "author": {
     "name": "DanneLeung",

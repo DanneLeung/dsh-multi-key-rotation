@@ -6,6 +6,8 @@ and how it is distributed.
 
 ![The Multi-Key Rotation tab of the Plugins settings section, showing three named API keys of one provider with their remaining quota for the 5-hour and weekly windows](preview.svg)
 
+![The Multi-Key Rotation card in the Plugins settings section, with three named MiniMax Token Plan keys and their remaining quota for the 5-hour and weekly windows](images/settings.png)
+
 ## Scope: MiniMax Token Plan only
 
 This release supports **one vendor**: MiniMax Token Plan, on the `minimax` and
@@ -279,6 +281,8 @@ The panel is terse on purpose: it floats over the composer and it holds a
 whole pool, so it carries **numbers, not sentences**. It has exactly one line
 of prose — its heading — and then one row per key of the pool, and two lines
 per row:
+
+![The hover panel, listing every key of the pool with its two windows, the key in use highlighted](images/panel.png)
 
 ```
 MiniMax Token Plan
