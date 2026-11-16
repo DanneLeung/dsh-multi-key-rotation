@@ -20,7 +20,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { join, resolve, dirname, normalize, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)))
@@ -90,6 +90,34 @@ function isAllowed(rel) {
   if (rel.startsWith('docs/')) return true
   if (rel.startsWith('locale/') && rel.endsWith('.json')) return true
   return false
+}
+
+/**
+ * The images a Markdown document writes, as paths relative to the package root.
+ *
+ * A relative destination resolves against the document's own directory, the
+ * way the Plugin Manager resolves it when it serves the picture.
+ * @param {string} document - the document's absolute path.
+ * @returns {string[]} package-relative image paths.
+ */
+function imagesOf(document) {
+  const markdown = readFileSync(document, 'utf8')
+  const base = dirname(document)
+  const out = new Set()
+  for (const match of markdown.matchAll(/!\[[^\]]*\]\(\s*([^)\s]+)/g)) {
+    const authored = match[1]
+    if (/^[A-Za-z][A-Za-z\d+.-]*:/.test(authored)) continue
+    const withoutSuffix = authored.replace(/[?#].*$/su, '')
+    // A relative destination resolves against the document's own directory;
+    // a rooted one against the package root.
+    const absolute = withoutSuffix.startsWith('/')
+      ? join(base, '..', withoutSuffix.slice(1))
+      : join(base, withoutSuffix)
+    // The tarball's entries are package-relative, so the image is reported
+    // the same way.
+    out.add(normalize(relative(ROOT, absolute)).split(sep).join('/'))
+  }
+  return [...out]
 }
 
 const work = mkdtempSync(join(tmpdir(), 'dsh-multi-key-rotation-pack-'))
@@ -188,6 +216,18 @@ try {
       if (!entries.includes(meta.detail)) {
         console.error(`meta.detail "${meta.detail}" is not in the tarball`)
         failed = true
+      }
+      // Every image the document writes must ship beside it. The Plugin
+      // Manager resolves a relative destination against the document's own
+      // directory and serves it from the installed bundle; a picture that
+      // did not ship leaves a broken image on the plugin's page, and the
+      // tarball looks complete because every other file is there.
+      const images = imagesOf(join(ROOT, meta.detail))
+      for (const image of images) {
+        if (!entries.includes(image)) {
+          console.error(`image "${image}", written by ${meta.detail}, is not in the tarball`)
+          failed = true
+        }
       }
     }
   }
