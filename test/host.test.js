@@ -495,6 +495,51 @@ test('a configuration whose providers are not an object does not throw', () => {
   assert.doesNotThrow(() => apply(makeContext(), {}))
 })
 
+test('an unsupported route is never taken over', async () => {
+  // This release supports MiniMax Token Plan only. A configuration that
+  // names another route must be ignored completely: the plugin must not
+  // write one of its keys into that route's credential reference, and must
+  // not rotate on that route's failures. A leftover configuration from a
+  // wider build cannot quietly take over a route this release does not
+  // understand.
+  const ctx = makeContext()
+  const config = {
+    providers: {
+      get: () => ({
+        deepseek: {
+          enabled: true,
+          rotate_on: [...DEFAULT_ROTATE_ON],
+          keys: [{ name: 'main', ref: 'DEEPSEEK_API_KEY_POOL_1', enabled: true }],
+          policy: { mode: 'failure', thresholdPercent: 0, reservePercent: 0 },
+        },
+      }),
+    },
+  }
+  ctx.credentials.store.set('DEEPSEEK_API_KEY_POOL_1', 'value-a')
+  ctx.credentials.store.set('DEEPSEEK_API_KEY', 'original')
+  apply(ctx, config)
+
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  // The route's own credential reference is untouched.
+  assert.equal(ctx.credentials.store.get('DEEPSEEK_API_KEY'), 'original')
+
+  // The health route knows nothing about it.
+  const answer = await callHealthFull(ctx, 'deepseek')
+  assert.equal(answer.status, 404)
+  assert.deepEqual(answer.body.keys, undefined)
+
+  // A failure on that route is delegated, not rotated.
+  const handler = ctx.listeners.get('agent/request-error')[0]
+  const outcome = await handler(
+    { provider: 'deepseek', failure: { code: 'QUOTA' }, signal: new AbortController().signal },
+    () => Promise.resolve('delegated'),
+  )
+  assert.equal(outcome, 'delegated')
+  assert.equal(ctx.credentials.store.get('DEEPSEEK_API_KEY'), 'original')
+})
+
 /**
  * Call the plugin's health route and return the parsed answer.
  *
@@ -505,6 +550,16 @@ test('a configuration whose providers are not an object does not throw', () => {
  * @returns the parsed body.
  */
 async function callHealth(ctx, provider) {
+  return (await callHealthFull(ctx, provider)).body
+}
+
+/**
+ * Call the plugin's health route and return the status and the parsed body.
+ * @param ctx - the plugin context.
+ * @param provider - the provider route id.
+ * @returns the status code and the parsed body.
+ */
+async function callHealthFull(ctx, provider) {
   const route = ctx.routes.get('/llm-key-pool/api/health')
   assert.notEqual(route, undefined, 'the health route must be registered')
   const chunks = []
@@ -524,7 +579,7 @@ async function callHealth(ctx, provider) {
   // the body, so the answer is awaited.
   await new Promise((resolve) => setTimeout(resolve, 0))
   await new Promise((resolve) => setTimeout(resolve, 0))
-  return JSON.parse(chunks.join(''))
+  return { status: res.statusCode, body: JSON.parse(chunks.join('')) }
 }
 
 /** A context that records what the plugin does to it. */

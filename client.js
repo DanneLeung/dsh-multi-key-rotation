@@ -207,6 +207,12 @@ window.__ModuleLoader__.load({
       '.m_pool_indicatorTip{pointer-events:none;box-sizing:border-box;position:absolute;right:0;bottom:calc(100% + 7px);width:256px;max-width:min(256px,calc(100vw - 24px));margin:0;padding:8px 9px;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-panel);background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 14px 34px rgba(0,0,0,.28);z-index:1000;line-height:1.35}',
       '.m_pool_indicatorTipError{margin:0 0 6px;padding:5px 7px;border-radius:var(--dsw-radius-sm);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 13%,transparent);color:var(--dsw-alias-state-error-primary);font-size:10px;line-height:1.4}',
       '.m_pool_indicatorTipEmpty{padding:6px 2px;color:var(--dsw-alias-label-secondary);font-size:10px;text-align:center}',
+      // The panel's title row: the product the figures belong to. It is a
+      // heading rather than a label, so it carries the weight. The title is
+      // inset by the panel's own padding, so the text sits on the same left
+      // edge as the key names below it.
+      '.m_pool_indicatorTipHead{display:block;margin:0 0 7px;padding:0 0 6px;border-bottom:.5px solid var(--dsw-alias-border-l2)}',
+      '.m_pool_indicatorTipTitle{display:block;color:var(--dsw-alias-label-primary);font-size:10.5px;font-weight:700;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       // One row per key: the key's name on the left, its two windows on the
       // right. The key in use is the only one that gets a marker.
       '.m_pool_indicatorPool{display:flex;flex-direction:column;gap:5px}',
@@ -293,6 +299,8 @@ window.__ModuleLoader__.load({
       'indicatorPoolName': 'm_pool_indicatorPoolName',
       'indicatorPoolRow': 'm_pool_indicatorPoolRow',
       'indicatorPoolRowActive': 'm_pool_indicatorPoolRowActive',
+      'indicatorTipHead': 'm_pool_indicatorTipHead',
+      'indicatorTipTitle': 'm_pool_indicatorTipTitle',
       'indicatorWindow': 'm_pool_indicatorWindow',
       'indicatorWindowFill': 'm_pool_indicatorWindowFill',
       'indicatorWindowFillEmpty': 'm_pool_indicatorWindowFillEmpty',
@@ -365,8 +373,8 @@ window.__ModuleLoader__.load({
     const en = {
       tab: 'Multi-Key Rotation',
       title: 'Multi-Key Rotation',
-      description: 'Give one provider several named API keys. Multi-Key Rotation takes the route over as soon as it loads, so your requests authenticate with a pool key instead of the one in Settings → Models. When a key hits a plan quota, a quota, a rate limit, or an auth error, the pool moves to the next key and retries the request — no restart, and the conversation continues.',
-      emptyProviders: 'No provider is available for pooling. Add one in Settings → Models first.',
+      description: 'Give a MiniMax Token Plan route several named API keys. Multi-Key Rotation takes the route over as soon as it loads, so your requests authenticate with a pool key instead of the one in Settings → Models. When a key hits a plan quota, a quota, a rate limit, or an auth error, the pool moves to the next key and retries the request — no restart, and the conversation continues.',
+      emptyProviders: 'No MiniMax route is available for pooling. Add one in Settings → Models first.',
       refresh: 'Refresh usage',
       refreshing: 'Refreshing…',
       loading: 'Loading…',
@@ -446,13 +454,15 @@ window.__ModuleLoader__.load({
       indicatorRefresh: 'Click to refresh',
       indicatorWindowInterval: '5h',
       indicatorWindowWeekly: '7d',
+      indicatorTitle: 'MiniMax Token Plan',
+      indicatorSlotLabel: 'MiniMax Token Plan usage',
       indicatorSummary: 'Multi-Key Rotation — {key}: 5-hour {interval}, weekly {weekly}. Click to refresh.',
     };
     const zh = {
       tab: '多密钥轮换',
       title: '多密钥轮换',
-      description: '为同一个提供商配置多个带名称的 API 密钥。插件加载后，多密钥轮换立即接管该路由，请求用的是池里的密钥，而不是「设置 → 模型」里配的那个。当某个密钥达到套餐额度、配额、限流或认证错误时，插件会自动切换到下一个密钥并重试请求 —— 无需重启，对话也不会中断。',
-      emptyProviders: '目前没有可用于多密钥轮换的提供商。请先在「设置 → 模型」中添加一个。',
+      description: '为 MiniMax Token Plan 路由配置多个带名称的 API 密钥。插件加载后，多密钥轮换立即接管该路由，请求用的是池里的密钥，而不是「设置 → 模型」里配的那个。当某个密钥达到套餐额度、配额、限流或认证错误时，插件会自动切换到下一个密钥并重试请求 —— 无需重启，对话也不会中断。',
+      emptyProviders: '目前没有可用于多密钥轮换的 MiniMax 路由。请先在「设置 → 模型」中添加一个。',
       refresh: '刷新用量',
       refreshing: '刷新中…',
       loading: '加载中…',
@@ -532,6 +542,8 @@ window.__ModuleLoader__.load({
       indicatorRefresh: '点击刷新',
       indicatorWindowInterval: '5h',
       indicatorWindowWeekly: '7d',
+      indicatorTitle: 'MiniMax Token Plan',
+      indicatorSlotLabel: 'MiniMax Token Plan 用量',
       indicatorSummary: '多密钥轮换 — {key}：五小时 {interval}，每周 {weekly}。点击刷新。',
     };
     //#endregion
@@ -562,6 +574,29 @@ window.__ModuleLoader__.load({
     const WRITE_TIMEOUT_MS = 15000;
     /** The sentinel a timed-out write settles with. */
     const TIMEOUT = Symbol('timeout');
+
+    /**
+     * The provider routes this plugin supports.
+     *
+     * The first release is deliberately narrow: **MiniMax Token Plan only**.
+     * It is the one subscription whose quota is published as two windows —
+     * a 5-hour one and a weekly one — and the one whose spent-plan error the
+     * adapter misclassifies, which is the whole reason this plugin exists.
+     *
+     * A route that is not in this list gets no settings card at all, so the
+     * page never offers to pool a provider whose quota the plugin cannot
+     * read. Mirrors the Host's `SUPPORTED_PROVIDERS`.
+     */
+    const SUPPORTED_PROVIDERS = Object.freeze(['minimax', 'minimax-cn']);
+
+    /**
+     * Whether a provider route is one this plugin supports.
+     * @param provider - provider route id.
+     * @returns true when the route is a MiniMax Token Plan route.
+     */
+    function isSupportedProvider(provider) {
+      return typeof provider === 'string' && SUPPORTED_PROVIDERS.includes(provider);
+    }
 
     /**
      * Derive the route's own reference from its provider id by convention.
@@ -729,13 +764,23 @@ window.__ModuleLoader__.load({
      * Every key gets the same two lines — the 5-hour window and the weekly
      * one — so the pool can be read at a glance. The key in use is the only
      * one that carries a marker, and it is marked by its colour alone, so
-     * the panel needs no heading and no prose.
+     * the panel needs no prose.
+     *
+     * The one line of prose the panel does carry is its heading: the figures
+     * belong to **MiniMax Token Plan**. Naming the plan keeps the scope next
+     * to the numbers it qualifies, instead of only in the README — a panel
+     * floating over the composer is read on its own.
      * @param props - the keys, the loading state, the error, and the labels.
      */
     function IndicatorPanel(props) {
       const keys = props.keys;
       return (0, react_jsx_runtime.jsxs)('div', { className: s.indicatorTip, role: 'dialog', id: props.id,
         children: [
+          (0, react_jsx_runtime.jsx)('div', { className: s.indicatorTipHead,
+            children: (0, react_jsx_runtime.jsx)('span', { className: s.indicatorTipTitle,
+              children: props.t('indicatorTitle'),
+            }),
+          }),
           props.error !== undefined
             ? (0, react_jsx_runtime.jsx)('div', { className: s.indicatorTipError, children: props.error })
             : null,
@@ -938,6 +983,7 @@ window.__ModuleLoader__.load({
       // The indicator belongs to a pooled provider only. A session on any
       // other route shows nothing at all.
       const pooled = props.pooledProviders();
+      if (!isSupportedProvider(provider)) return null;
       if (!pooled.includes(provider)) return null;
 
       const keys = usage?.keys ?? [];
@@ -1124,6 +1170,7 @@ window.__ModuleLoader__.load({
       pooledProviders() {
         const out = [];
         for (const [provider, profile] of this.readProfiles(this.readSection())) {
+          if (!isSupportedProvider(provider)) continue;
           if (profile.enabled !== true) continue;
           if (profile.keys.length === 0) continue;
           out.push(provider);
@@ -1162,6 +1209,10 @@ window.__ModuleLoader__.load({
           const declared = new Map(declaredResponse.value.map((entry) => [entry.provider, entry]));
           this.rows.clear();
           for (const entry of registeredResponse.value) {
+            // Only the supported routes get a card. A route this release does
+            // not handle is left out entirely rather than offered as a pool
+            // whose quota could never be read.
+            if (!isSupportedProvider(entry.id)) continue;
             this.rows.set(entry.id, this.buildRow(entry, declared.get(entry.id), saved.get(entry.id)));
           }
           await this.refreshCredentialState();
@@ -2458,7 +2509,7 @@ window.__ModuleLoader__.load({
           name: 'conversation.input.right',
           id: 'multi-key-rotation-usage',
           order: 3,
-          label: () => t('indicatorTitle'),
+          label: () => t('indicatorSlotLabel'),
           locale: LOCALE_NS,
           inject: (sessionId) => ({
             directory: directoryOf(scoped.modelDirectories, sessionId),

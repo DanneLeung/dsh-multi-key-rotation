@@ -198,7 +198,7 @@ test('the page renders the empty state when no provider is available', async () 
   }
 })
 
-test('the page renders a card per provider', async () => {
+test('the page renders a card per supported provider', async () => {
   const harness = boot()
   await settle()
   const face = harness.registered[0].options.inject()
@@ -207,6 +207,50 @@ test('the page renders a card per provider', async () => {
   const shown = texts(render(harness)).join('\n')
   assert.match(shown, /minimax-cn/)
   assert.match(shown, /MiniMax \(CN\)/)
+})
+
+test('an unsupported route gets no card', async () => {
+  // The Host lists a route this release does not support. Offering it a card
+  // would promise usage figures the plugin cannot read, so it is left out.
+  const harness = boot()
+  await settle()
+  const face = harness.registered[0].options.inject()
+  const state = face.hooks.keyPool.getSnapshot()
+  const ids = state.providers.map((row) => row.provider)
+  assert.ok(!ids.includes('deepseek'), 'an unsupported route must not get a card')
+  assert.deepEqual(ids, ['minimax-cn', 'minimax'])
+  const shown = texts(render(harness)).join('\n')
+  assert.doesNotMatch(shown, /deepseek/)
+})
+
+test('an unsupported route is never pooled, even when configured', async () => {
+  // A configuration left over from a wider build names an unsupported route.
+  // It must not reach the Host as a pool: the Host would not act on it
+  // anyway, and the composer must not show a capsule for it.
+  calls.profile = {
+    providers: {
+      deepseek: {
+        enabled: true,
+        rotate_on: ['QUOTA'],
+        keys: [{ name: 'main', ref: 'DEEPSEEK_API_KEY_POOL_1', enabled: true }],
+        policy: { mode: 'failure', thresholdPercent: 0, reservePercent: 0 },
+      },
+    },
+  }
+  try {
+    const harness = boot()
+    await settle()
+    const face = harness.registered[0].options.inject()
+    const state = face.hooks.keyPool.getSnapshot()
+    // The cards are the supported routes, whatever the configuration says.
+    assert.deepEqual(state.providers.map((row) => row.provider), ['minimax-cn', 'minimax'])
+    // The composer's list of pooled routes skips the unsupported one.
+    const entry = indicatorEntry(harness)
+    const injected = entry.options.inject('session-1')
+    assert.deepEqual(injected.pooledProviders(), [])
+  } finally {
+    calls.profile = { providers: {} }
+  }
 })
 
 test('a provider without a configured pool starts collapsed', async () => {
@@ -1130,6 +1174,65 @@ test('the indicator shows no prose, only the numbers', async () => {
     // None of the sentences the panel used to carry.
     assert.doesNotMatch(shown, /正在使用|五小时窗口|周窗口|还剩/);
     assert.doesNotMatch(shown, /resets in|Key in use|5-hour window|Weekly window/);
+  } finally {
+    calls.health = { keys: [] };
+    calls.profile = { providers: {} };
+    restore();
+  }
+});
+
+test('the panel names the plan it reports on', async () => {
+  // The panel's heading says which plan the figures belong to, and that it
+  // is the only plan this release supports. The scope belongs next to the
+  // numbers it qualifies, not only in the README.
+  const restore = stubFetch();
+  calls.profile = pooledProfile();
+  calls.health = {
+    provider: 'minimax-cn',
+    keys: [
+      {
+        name: 'primary',
+        ref: 'MINIMAX_CN_API_KEY_POOL_1',
+        enabled: true,
+        configured: true,
+        current: true,
+        quotaOk: true,
+        intervalRemainingPercent: 80,
+        intervalResetAt: Date.now() + 2 * 3_600_000 + 13 * 60_000,
+        weeklyRemainingPercent: 39,
+        weeklyResetAt: Date.now() + 2 * 86_400_000 + 22 * 3_600_000,
+      },
+    ],
+  }
+  try {
+    const harness = boot();
+    harness.openIndicator = true;
+    await settle();
+    await settle();
+    // The real translator, so the assertion sees the dictionary's text and
+    // not the raw key.
+    const entry = indicatorEntry(harness);
+    const face = entry.options.inject('session-1');
+    const t = harness.ctx.locale.bind('settings.keyPool');
+    const render = () => renderTree(harness.react, entry.component, { ...face, t });
+    // The first render starts the fetch; the answer lands a tick later, so
+    // the component is rendered again to pick it up.
+    render();
+    await settle();
+    await settle();
+    const tree = render();
+    const host = byClass(tree, 'm_pool_indicatorHost')[0];
+    assert.notEqual(host, undefined);
+    host.props.onMouseEnter();
+    const open = render();
+    const panel = byClass(open, 'm_pool_indicatorTip')[0];
+    assert.notEqual(panel, undefined);
+    const head = byClass(panel, 'm_pool_indicatorTipHead');
+    assert.equal(head.length, 1);
+    const shown = texts(head[0]).join(' ');
+    assert.match(shown, /MiniMax Token Plan/);
+    // The heading is the title alone: no scope sentence.
+    assert.doesNotMatch(shown, /only plan supported/);
   } finally {
     calls.health = { keys: [] };
     calls.profile = { providers: {} };

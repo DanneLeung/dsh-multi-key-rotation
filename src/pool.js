@@ -74,6 +74,32 @@ export function credentialRef(value) {
 export const REGIONS = Object.freeze({ global: 'global', cn: 'cn' })
 
 /**
+ * The provider routes this plugin supports.
+ *
+ * The first release is deliberately narrow: **MiniMax Token Plan only**. It is
+ * the one subscription whose quota is published as two windows — a 5-hour one
+ * and a weekly one — and the one whose spent-plan error the adapter
+ * misclassifies, which is the whole reason this plugin exists. Supporting a
+ * route whose quota endpoint is unknown would mean showing usage figures the
+ * plugin cannot actually know, so such a route is left out rather than
+ * half-supported.
+ *
+ * The list is a *support* list, not an enablement switch: a route that is not
+ * in it gets no settings card, no composer indicator, and no quota probe.
+ */
+export const SUPPORTED_PROVIDERS = Object.freeze(['minimax', 'minimax-cn'])
+
+/**
+ * Whether a provider route is one this plugin supports.
+ *
+ * @param provider - provider route id, such as `minimax-cn`.
+ * @returns true when the route is a MiniMax Token Plan route.
+ */
+export function isSupportedProvider(provider) {
+  return typeof provider === 'string' && SUPPORTED_PROVIDERS.includes(provider)
+}
+
+/**
  * The official quota hosts of each region, most authoritative first. The
  * `api.*` host is the TLS-stable fallback of the `www.*` documentation host.
  */

@@ -445,13 +445,21 @@ function makeContext() {
         value: calls.noProviders
           ? []
           : [
+            // Both supported MiniMax routes, so the page has two cards.
             { id: 'minimax-cn', name: 'minimax-cn' },
+            { id: 'minimax', name: 'minimax' },
+            // An unsupported route: it must get no card at all.
             { id: 'deepseek', name: 'deepseek' },
           ],
       }),
       listConfigurableProviders: async () => ({
         ok: true,
-        value: calls.noProviders ? [] : [{ provider: 'minimax-cn', displayName: 'MiniMax (CN)' }],
+        value: calls.noProviders
+          ? []
+          : [
+            { provider: 'minimax-cn', displayName: 'MiniMax (CN)' },
+            { provider: 'minimax', displayName: 'MiniMax' },
+          ],
       }),
     },
     credentials: {

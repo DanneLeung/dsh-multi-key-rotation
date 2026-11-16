@@ -6,6 +6,41 @@ and how it is distributed.
 
 ![The Multi-Key Rotation tab of the Plugins settings section, showing three named API keys of one provider with their remaining quota for the 5-hour and weekly windows](preview.svg)
 
+## Scope: MiniMax Token Plan only
+
+This release supports **one vendor**: MiniMax Token Plan, on the `minimax` and
+`minimax-cn` routes.
+
+The reason is in the code, not in the marketing. The plugin's whole value
+rests on two facts that only MiniMax has:
+
+1. **The quota is published as two windows.** `GET /v1/token_plan/remains`
+   answers with a 5-hour remaining share and a weekly remaining share, each
+   with the moment it resets. That is what the two bars, the reset countdowns
+   and the "key that is about to reset is spent first" selection are built on.
+2. **The spent-plan error is misclassified.** MiniMax answers a spent plan
+   with HTTP 402 and body code `2067`, which the pi-ai adapter reports as
+   `PI_AI_ERROR` — a code no failure-trigger list would ever name, so a spent
+   plan rotates on nothing.
+
+A route whose quota endpoint is unknown would mean showing usage figures the
+plugin cannot actually know, and a route whose quota codes are unknown would
+mean the failure path silently never fires. So such a route is left out
+rather than half-supported.
+
+The support list lives in `src/pool.js` as `SUPPORTED_PROVIDERS`, with
+`isSupportedProvider()` as its predicate. It is enforced at three points:
+
+| Where | What it does |
+|---|---|
+| `index.js` → `readProfiles()` | drops every profile of an unsupported route, so it is never activated, never probed, and never written into a route's credential reference |
+| `client.js` → `load()` | gives a settings card only to a supported route, so the page never offers to pool a route whose quota could not be read |
+| `client.js` → `PoolUsageIndicator` | renders the composer capsule only for a supported route |
+
+The Host's filter is the important one: it means a leftover configuration
+from a wider build cannot quietly take over a route this release does not
+understand.
+
 ## Package layout
 
 ```
@@ -241,13 +276,26 @@ the panel and stops the event, so the key does not also reach the composer.
 ### What the panel shows
 
 The panel is terse on purpose: it floats over the composer and it holds a
-whole pool, so it carries **numbers, not sentences**. One row per key of the
-pool, and two lines per row:
+whole pool, so it carries **numbers, not sentences**. It has exactly one line
+of prose — its heading — and then one row per key of the pool, and two lines
+per row:
 
 ```
+MiniMax Token Plan
 primary   5h  ▓▓▓▓▓▓░░░░  80% 2h13m
           7d  ▓▓▓▓░░░░░░░  39% 2d22h
 ```
+
+The heading names the plan the figures belong to. The scope belongs **next
+to the numbers it qualifies**, not only in the README — a panel floating over
+the composer is read on its own, without the documentation open beside it.
+The heading says *which* plan, not what the plugin supports in general: the
+scope sentence would be a second line of prose in a panel whose whole design
+is to carry numbers.
+
+The heading's left edge is the panel's content edge, the same one the key
+names sit on. The heading carries no padding of its own, so the two agree
+without a magic number.
 
 Each line is the window's label (`5h`, `7d`), its remaining share as a bar
 and a percentage, and the time left before the window resets. The countdown
@@ -258,6 +306,11 @@ in half the width.
 The **key in use** carries its own tinted background, a marker bar on its
 left, and its figures in the same colour. The marker is a shape, so the
 panel needs no word to say which key is running.
+
+The heading is a separate element from the slot's own `label`, because the
+two answer different questions: the slot label is the accessible name of the
+capsule in the composer row (`MiniMax Token Plan usage`), while the heading
+is the visible text inside the panel.
 
 ### The columns line up
 
@@ -316,10 +369,10 @@ the other into a permanent "working" state.
 
 ### The list of pooled providers
 
-The capsule appears only for a provider this plugin pools. The list is read
-from the saved configuration on **every render**, not captured once at
-registration, so a pool that is switched on after the page loaded still gets
-its capsule.
+The capsule appears only for a **supported** provider this plugin pools — in
+this release, only `minimax` and `minimax-cn`. The list is read from the
+saved configuration on **every render**, not captured once at registration, so
+a pool that is switched on after the page loaded still gets its capsule.
 
 ### Polling and cleanup
 

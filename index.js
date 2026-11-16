@@ -107,9 +107,9 @@ import { randomUUID } from 'node:crypto'
 import z from '@deepseek-ai/schemastery'
 import {
   applyReserve, clampPercent, credentialRef, envRefOf, fetchRemains, overallRemainingPercent,
-  intervalRemainingPercent, intervalResetAt, isResting, poolEntrySchema, policySchema, quotaSummaryOf,
-  regionOfProvider, pickNextKey, rankByResetOrder, selectKey, weeklyRemainingPercent, weeklyResetAt,
-  QUOTA_TTL_MS,
+  intervalRemainingPercent, intervalResetAt, isResting, isSupportedProvider, poolEntrySchema,
+  policySchema, quotaSummaryOf, regionOfProvider, pickNextKey, rankByResetOrder, selectKey,
+  weeklyRemainingPercent, weeklyResetAt, QUOTA_TTL_MS,
 } from './src/pool.js'
 
 /** Plugin name and the settings namespace this plugin owns. */
@@ -247,6 +247,12 @@ export const Config = z.object({
  * and `llm/stream` waterfalls, where a throw would abort the agent loop and
  * take the host down with it, so every failure degrades to "no profiles"
  * instead of propagating.
+ *
+ * Only **supported** routes survive the filter. A profile of an unsupported
+ * route is ignored completely — it is never activated, never probed, and never
+ * written into the route's credential reference — so a configuration left
+ * over from a wider build cannot quietly take over a route this release does
+ * not understand.
  * @returns the provider profiles, or an empty object.
  */
 function readProfiles(config) {
@@ -255,7 +261,11 @@ function readProfiles(config) {
     if (field === undefined || field === null) return {}
     const value = typeof field.get === 'function' ? field.get() : field
     if (typeof value !== 'object' || value === null || Array.isArray(value)) return {}
-    return value
+    const out = {}
+    for (const [provider, profile] of Object.entries(value)) {
+      if (isSupportedProvider(provider)) out[provider] = profile
+    }
+    return out
   } catch (error) {
     console.error('[llm-key-pool] the provider profiles could not be read; continuing without them')
     console.error(error)

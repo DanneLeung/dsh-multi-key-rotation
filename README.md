@@ -1,9 +1,9 @@
 # 多密钥轮换 / Multi-Key Rotation
 
-> Give one LLM provider several named API keys, and let the plugin rotate
-> between them automatically by remaining quota — configured from a tab in the
-> built-in Plugins settings section, without naming an environment variable by
-> hand.
+> Give a **MiniMax Token Plan** route several named API keys, and let the
+> plugin rotate between them automatically by remaining quota — configured from
+> a tab in the built-in Plugins settings section, without naming an environment
+> variable by hand.
 
 [![npm](https://img.shields.io/npm/v/@danneleung/dsh-multi-key-rotation?style=flat-square&color=4b6fff)](https://www.npmjs.com/package/@danneleung/dsh-multi-key-rotation)
 [![DeepSeek Harness](https://img.shields.io/badge/deepseek--harness-v0.2.2--rc.3-263146?style=flat-square)](https://github.com/deepseek-ai/deepseek-harness)
@@ -11,18 +11,33 @@
 
 ---
 
+## Scope of this release
+
+This first release supports **MiniMax Token Plan only** — the `minimax` and
+`minimax-cn` routes.
+
+That is deliberate, not a gap. MiniMax Token Plan is the one subscription
+whose quota is published as **two windows** (a 5-hour one and a weekly one),
+and the one whose spent-plan error the adapter misclassifies — which is the
+whole reason this plugin exists. A route whose quota endpoint is unknown
+would mean showing usage figures the plugin cannot actually know, so such a
+route is left out rather than half-supported.
+
+A route this release does not support gets **no settings card, no composer
+indicator, and no quota probe** — it is never touched, even if a leftover
+configuration names it.
+
 ## What it does
 
-Give one provider several API keys — for example several **MiniMax Token
-Plan** subscription keys — and the plugin keeps the provider working when one
-of them runs out.
+Give a MiniMax Token Plan route several API keys, and the plugin keeps it
+working when one of them runs out.
 
 When a request fails because a key hit its plan quota, its quota, a rate
 limit, or an auth error, the plugin writes the **next key of the pool** into
-the provider's credential reference and retries the request. The turn
-continues; nothing is lost and nothing restarts.
+the route's credential reference and retries the request. The turn continues;
+nothing is lost and nothing restarts.
 
-Three things make it more than a rotation loop:
+Four things make it more than a rotation loop:
 
 1. **The pool takes over the route immediately.** You configured a pool, so
    the pool *is* the route's key — from the first request, not from the first
@@ -140,7 +155,7 @@ set of runtime identities.
 
 **Settings** → **Plugins** → **Multi-Key Rotation** (「多密钥轮换」): the plugin's configuration is a
 tab of the built-in Plugins settings section, beside the shipped **Plugin
-list** tab. Every provider that has keys gets one card.
+list** tab. Every MiniMax route that has keys gets one card.
 
 1. Open a provider's card.
 2. Add keys. Give a key a name and paste its value, then press **Add key**;
@@ -217,10 +232,12 @@ small capsule with two bars:
 The bars are colored by the remaining share: green while it is healthy, amber
 under 20%, red at zero.
 
-Hover the capsule to open a panel. It lists **every key of the pool**, one row
-per key, with two lines per row:
+Hover the capsule to open a panel. Its heading names the plan the figures
+belong to — **MiniMax Token Plan** — and below it the panel lists **every key
+of the pool**, one row per key, with two lines per row:
 
 ```
+MiniMax Token Plan
 primary   5h  ▓▓▓▓▓▓░░░░  80% 2h13m
           7d  ▓▓▓▓░░░░░░░  39% 2d22h
 ```
@@ -228,9 +245,9 @@ primary   5h  ▓▓▓▓▓▓░░░░  80% 2h13m
 Each line is the window's label, its remaining share as a bar and a
 percentage, and the time left before the window resets. The rows are listed
 in the order the pool is used in — the key whose week rolls over soonest
-first — and the key the route is authenticating with is highlighted. The
-panel is deliberately terse — numbers rather than sentences — because it
-floats over the composer and holds a whole pool.
+first — and the key the route is authenticating with is highlighted. Apart
+from that one heading line, the panel is deliberately terse — numbers rather
+than sentences — because it floats over the composer and holds a whole pool.
 
 Moving the pointer away closes the panel, and **Escape** closes it too.
 Clicking the capsule forces a fresh probe of every key instead of waiting for
@@ -240,11 +257,11 @@ The capsule is a normal item in the composer row: the row lays it out, so
 the input's layout is the Host's business and nothing is measured or
 positioned by the plugin.
 
-The indicator only appears for a provider this plugin pools, and only while a
-session is open. It never shows a key value — only the remaining shares and
-the reset moments, which the Host reads from the provider.
+The indicator only appears for a MiniMax route this plugin pools, and only
+while a session is open. It never shows a key value — only the remaining
+shares and the reset moments, which the Host reads from the provider.
 
-## MiniMax Token Plan
+## The MiniMax Token Plan specifics
 
 MiniMax reports a spent plan as HTTP **402** with body code `2067`
 ("套餐额度已用完"), and an exhausted window as HTTP **429** with code `2056`
@@ -261,7 +278,10 @@ The remaining quota of a Token Plan key is published at
 `GET /v1/token_plan/remains`. The plugin probes that endpoint **on the
 Host**, where the key values live, and caches each answer for 45 seconds. The
 browser only ever sees the remaining percentage and the reset moments — never
-a key. The probe runs for MiniMax routes only (`minimax` and `minimax-cn`).
+a key.
+
+The two regions are probed at their own hosts: `minimax-cn` at
+`api.minimaxi.com`, `minimax` at `www.minimax.io`.
 
 ## Interplay with `dsh-llm-retry`
 
