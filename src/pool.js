@@ -523,6 +523,53 @@ export function fullResetAt(quota) {
 }
 
 /**
+ * Decide whether one key has nothing left in either window.
+ *
+ * A key is EXHAUSTED when the 5-hour window is at zero, or when the weekly
+ * window is at zero — either one is enough. A key with a full week but an
+ * empty 5-hour window cannot serve a request until the 5-hour window rolls
+ * over, and a key with 5-hour headroom but an exhausted week cannot serve
+ * one until the week rolls over. Handing out such a key spends a request on a
+ * key that can only fail.
+ *
+ * This rule is deliberately separate from {@link isResting}: resting is a
+ * *policy* about how much headroom to keep (and it lasts until the week
+ * resets), while exhaustion is a *fact* about the key's allowance. A key
+ * that is exhausted is skipped no matter what the threshold says, and no
+ * matter how the user pinned it.
+ *
+ * A key whose quota could not be read is NOT exhausted: an unknown allowance
+ * is not a known-empty one, and refusing to use a key whose quota the probe
+ * could not reach would take the route down.
+ * @param quota - the reduced quota of one key.
+ * @returns true when the key has nothing left in the 5-hour or the weekly
+ * window.
+ */
+export function isExhausted(quota) {
+  if (quota === undefined || !quota.ok) return false
+  for (const model of quota.models) {
+    if (model.intervalPercent === 0) return true
+    if (model.weeklyPercent === 0) return true
+  }
+  return false
+}
+
+/**
+ * The candidates that still have something left in either window.
+ *
+ * The exhausted candidates are taken out first, and the rest are returned in
+ * their original order. When EVERY candidate is exhausted the original list
+ * is returned unchanged: a request still has to be answered, and a key with
+ * an empty window fails no worse than a key with no quota data at all.
+ * @param candidates - the candidates to filter.
+ * @returns the candidates that are not exhausted.
+ */
+export function dropExhausted(candidates) {
+  const alive = candidates.filter((candidate) => !isExhausted(candidate.quota))
+  return alive.length > 0 ? alive : candidates
+}
+
+/**
  * Decide whether one key is resting below the policy's threshold.
  *
  * A key rests when its remaining share is below the threshold *and* its
@@ -555,6 +602,11 @@ export function isResting(quota, thresholdPercent, now = Date.now()) {
  * whose WEEK rolls over soonest, and among those the one whose 5-hour window
  * resets soonest.
  *
+ * A key that is EXHAUSTED — with nothing left in the 5-hour window, or in
+ * the weekly window, or in both — is never handed out, by any mode and
+ * under no pin: such a key can only fail. A key whose quota is unknown is
+ * not treated as exhausted.
+ *
  * A key that is resting — below the policy threshold with its week not yet
  * rolled over — is skipped while another key is available; a key whose
  * weekly window has already reset becomes eligible again even when it
@@ -571,20 +623,24 @@ export function isResting(quota, thresholdPercent, now = Date.now()) {
 export function selectKey({ policy, candidates, currentValue, pinnedRef, now = Date.now() }) {
   const usable = candidates.filter((candidate) => candidate.enabled)
   if (usable.length === 0) return undefined
+  // A key with nothing left in either window is taken out before anything
+  // else: the pin, the threshold and the reset order all rank the candidates,
+  // and none of them may rank a key that cannot serve a request.
+  const alive = dropExhausted(usable)
   // A pinned key wins. The user named the key this provider should use, and
   // as long as it is usable it stays in use.
-  const pinned = usable.find((candidate) => candidate.ref === pinnedRef)
+  const pinned = alive.find((candidate) => candidate.ref === pinnedRef)
   if (pinned !== undefined) return pinned
   if (policy.mode !== 'remaining') {
-    return usable.find((candidate) => candidate.value === currentValue) ?? usable[0]
+    return alive.find((candidate) => candidate.value === currentValue) ?? alive[0]
   }
 
   const resting = new Set()
-  for (const candidate of usable) {
+  for (const candidate of alive) {
     if (isResting(candidate.quota, policy.thresholdPercent, now)) resting.add(candidate.ref)
   }
-  const available = usable.filter((candidate) => !resting.has(candidate.ref))
-  const pool = available.length > 0 ? available : usable
+  const available = alive.filter((candidate) => !resting.has(candidate.ref))
+  const pool = available.length > 0 ? available : alive
 
   // Without a quota answer the reset order is unknown, so the routine path
   // must not churn the credential on a guess: the key already in use stays
@@ -660,9 +716,11 @@ export function rankByResetOrder(candidates) {
  * key with more time left keeps its allowance for later.
  *
  * The key that just failed is left out of the search — it is the key that
- * did not work. A key resting below the policy's threshold is skipped while
- * another key is available; when every key rests, the resting ones are used
- * anyway, because a failure still has to be answered.
+ * did not work. A key with nothing left in either window is left out too:
+ * moving onto it would only trade one failure for another. A key resting
+ * below the policy's threshold is skipped while another key is available;
+ * when every key rests, the resting ones are used anyway, because a failure
+ * still has to be answered.
  *
  * With no quota known for any key, the pool is searched in its own order,
  * which keeps the walk deterministic instead of random.
@@ -674,8 +732,19 @@ export function pickNextKey({ policy, candidates, currentValue, pinnedRef, now =
   if (usable.length === 0) return undefined
 
   // The failed key is the one that did not work.
-  const others = usable.filter((candidate) => candidate.value !== currentValue)
-  const search = others.length > 0 ? others : usable
+  //
+  // A key with nothing left in either window is skipped before the search:
+  // moving the route onto a key that cannot serve a request would only trade
+  // one failure for another.
+  //
+  // The exhausted keys are taken out of the whole pool, not just out of the
+  // search, because the search may be left with nothing but exhausted keys
+  // while a healthy key is still sitting in the pool — the key that just
+  // failed is excluded from the search, and excluding it must not make the
+  // walk fall back onto an empty key when another key is still usable.
+  const alive = dropExhausted(usable)
+  const aliveSearch = alive.filter((candidate) => candidate.value !== currentValue)
+  const search = aliveSearch.length > 0 ? aliveSearch : alive
 
   const resting = new Set()
   for (const candidate of search) {
@@ -714,7 +783,10 @@ export function applyReserve(candidates, reservePercent) {
     .map((candidate) => ({ candidate, remaining: overallRemainingPercent(candidate.quota) }))
     .filter((entry) => entry.remaining !== undefined)
   if (scored.length === 0) return candidates
-  const reservable = scored.filter((entry) => entry.remaining > reservePercent)
+  // A key with nothing left is never reserve: it is not a key the failure
+  // path could fall back to, so holding it back would only take a usable key
+  // out of the routine path for nothing.
+  const reservable = scored.filter((entry) => entry.remaining > reservePercent && !isExhausted(entry.candidate.quota))
   if (reservable.length === 0) return candidates
   const reserved = new Set(reservable.map((entry) => entry.candidate.ref))
   const rest = candidates.filter((candidate) => !reserved.has(candidate.ref))

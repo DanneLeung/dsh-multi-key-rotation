@@ -32,10 +32,12 @@ import {
   applyReserve,
   clampPercent,
   credentialRef,
+  dropExhausted,
   envRefOf,
   fetchRemains,
   isCredentialRefName,
   intervalResetAt,
+  isExhausted,
   isResting,
   overallRemainingPercent,
   pickNextKey,
@@ -65,6 +67,15 @@ function quota(intervalPercent, weeklyPercent, resetAt) {
 /** A candidate of the pool. */
 function candidate(ref, value, remaining, resetAt) {
   return { name: ref, ref, enabled: true, value, quota: quota(remaining, remaining, resetAt) }
+}
+
+/**
+ * A candidate whose 5-hour window and weekly window carry different shares,
+ * which is what the exhausted rule decides on: either window at zero is
+ * enough to make the key unusable.
+ */
+function candidateWithShares(ref, value, intervalPercent, weeklyPercent, resetAt = 9_000) {
+  return { name: ref, ref, enabled: true, value, quota: quota(intervalPercent, weeklyPercent, resetAt) }
 }
 
 /**
@@ -424,6 +435,149 @@ test('a percentage out of range is clamped rather than rejected', () => {
 })
 
 // ---------------------------------------------------------------------------
+// The exhausted key
+//
+// A key with nothing left in the 5-hour window, or in the weekly window, or
+// in both, must never be handed to a request: it can only fail. The rule is
+// separate from the resting threshold, and it holds under every mode and
+// under a pin.
+// ---------------------------------------------------------------------------
+
+test('a key with nothing left in either window is exhausted', () => {
+  const now = 1_000
+  assert.equal(isExhausted(quota(0, 50, 9_000)), true, 'an empty 5-hour window is enough')
+  assert.equal(isExhausted(quota(50, 0, 9_000)), true, 'an empty weekly window is enough')
+  assert.equal(isExhausted(quota(0, 0, 9_000)), true)
+  assert.equal(isExhausted(quota(50, 50, 9_000)), false)
+})
+
+test('a key whose quota could not be read is not treated as exhausted', () => {
+  // An unknown allowance is not a known-empty one: refusing to use a key
+  // whose quota the probe could not reach would take the route down.
+  assert.equal(isExhausted(undefined), false)
+  assert.equal(isExhausted({ ok: false, error: 'probe failed' }), false)
+})
+
+test('the exhausted keys are dropped from the pool', () => {
+  const candidates = [
+    candidate('A', 'value-a', 0, 50),
+    candidate('B', 'value-b', 80, 80),
+  ]
+  assert.deepEqual(dropExhausted(candidates).map((entry) => entry.ref), ['B'])
+})
+
+test('a pool of exhausted keys is used anyway, because a request must be answered', () => {
+  const candidates = [
+    candidate('A', 'value-a', 0, 0),
+    candidate('B', 'value-b', 0, 0),
+  ]
+  assert.deepEqual(dropExhausted(candidates).map((entry) => entry.ref), ['A', 'B'])
+})
+
+test('the routine path never hands out an exhausted key', () => {
+  // The 5-hour window is empty on A, the weekly window is empty on B. Only C
+  // can serve the request.
+  const chosen = selectKey({
+    policy: { mode: 'remaining', thresholdPercent: 0, reservePercent: 0 },
+    candidates: [
+      candidateWithShares('A', 'value-a', 0, 60),
+      candidateWithShares('B', 'value-b', 60, 0),
+      candidateWithShares('C', 'value-c', 60, 60),
+    ],
+    currentValue: 'value-a',
+    now: 1_000,
+  })
+  assert.equal(chosen.ref, 'C')
+})
+
+test('the failure path never moves onto an exhausted key', () => {
+  const chosen = pickNextKey({
+    policy: { mode: 'failure', thresholdPercent: 0, reservePercent: 0 },
+    candidates: [
+      candidateWithShares('A', 'value-a', 0, 60),
+      candidateWithShares('B', 'value-b', 60, 60),
+    ],
+    currentValue: 'value-a',
+    now: 1_000,
+  })
+  assert.equal(chosen.ref, 'B')
+})
+
+test('the failure path skips an exhausted key even when it is the pinned one', () => {
+  // The pin is a preference, not a lock — but a key that cannot serve the
+  // request is not handed out under any pin.
+  const chosen = pickNextKey({
+    policy: { mode: 'failure', thresholdPercent: 0, reservePercent: 0 },
+    candidates: [
+      candidateWithShares('A', 'value-a', 0, 0),
+      candidateWithShares('B', 'value-b', 60, 60),
+    ],
+    currentValue: 'value-b',
+    pinnedRef: 'A',
+    now: 1_000,
+  })
+  assert.equal(chosen.ref, 'B')
+})
+
+test('an exhausted key is skipped even when it resets soonest', () => {
+  // The reset order decides between the keys that CAN serve the request. It
+  // never ranks a key that cannot.
+  const chosen = selectKey({
+    policy: { mode: 'remaining', thresholdPercent: 0, reservePercent: 0 },
+    candidates: [
+      {
+        name: 'A',
+        ref: 'A',
+        enabled: true,
+        value: 'value-a',
+        quota: {
+          ok: true,
+          models: [{
+            name: 'MiniMax-M3',
+            intervalPercent: 0,
+            weeklyPercent: 60,
+            intervalResetAt: 1_100,
+            weeklyResetAt: 1_100,
+          }],
+        },
+      },
+      candidateWithWindows('B', 'value-b', 9_000, 9_000),
+    ],
+    currentValue: 'value-b',
+    now: 1_000,
+  })
+  assert.equal(chosen.ref, 'B')
+})
+
+test('an exhausted key is never held back as reserve', () => {
+  // A key with nothing left is not a key the failure path could fall back
+  // to, so holding it back would only take a usable key out of the routine
+  // path for nothing. Here the exhausted key B must not be the reserve; A is
+  // the healthy key and it is the one that is held back.
+  const candidates = [
+    candidateWithShares('A', 'value-a', 90, 90),
+    candidateWithShares('B', 'value-b', 0, 90),
+  ]
+  assert.deepEqual(applyReserve(candidates, 50).map((entry) => entry.ref), ['B'])
+})
+
+test('the exhausted rule is independent of the resting threshold', () => {
+  // The threshold is about keeping headroom in reserve; the exhausted rule
+  // is about a key that has nothing left at all. A zero threshold must not
+  // let an empty key through.
+  const chosen = selectKey({
+    policy: { mode: 'remaining', thresholdPercent: 0, reservePercent: 0 },
+    candidates: [
+      candidateWithShares('A', 'value-a', 0, 60),
+      candidateWithShares('B', 'value-b', 60, 60),
+    ],
+    currentValue: 'value-a',
+    now: 1_000,
+  })
+  assert.equal(chosen.ref, 'B')
+})
+
+// ---------------------------------------------------------------------------
 // Provider quota signatures
 // ---------------------------------------------------------------------------
 
@@ -703,6 +857,118 @@ test('the remaining policy does not rewrite the credential on every request', as
   // The key in use is already the healthiest, so no write may happen.
   assert.equal(writes, 0)
   assert.equal(ctx.credentials.store.get('MINIMAX_CN_API_KEY'), 'value-a')
+})
+
+// ---------------------------------------------------------------------------
+// The exhausted key, end to end
+//
+// The point of these tests is the ORDER: the pool must move off an empty
+// key BEFORE the request goes out, not after the provider reports an error.
+// ---------------------------------------------------------------------------
+
+test('the pool moves off an empty key before the request, not after an error', async () => {
+  const ctx = makeContext()
+  const now = Date.now()
+  const later = now + 3_600_000
+
+  // The route is on the first key, and that key has nothing left in its
+  // 5-hour window. The second key is healthy.
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async (_url, init) => {
+    const token = String(init.headers.Authorization).replace('Bearer ', '')
+    const payload = token === 'value-b'
+      ? quotaAnswer(later, later, 80, 80)
+      : quotaAnswer(later, later, 0, 80)
+    return {
+      ok: true,
+      status: 200,
+      async text() {
+        return JSON.stringify(payload)
+      },
+    }
+  }
+
+  try {
+    const config = {
+      providers: {
+        get: () => ({
+          'minimax-cn': {
+            enabled: true,
+            rotate_on: [...DEFAULT_ROTATE_ON],
+            keys: [
+              { name: 'primary', ref: 'MINIMAX_CN_API_KEY_POOL_1', enabled: true },
+              { name: 'secondary', ref: 'MINIMAX_CN_API_KEY_POOL_2', enabled: true },
+            ],
+            // The failure mode: the pool does not re-rank itself, it only
+            // steps off a key that has nothing left.
+            policy: { mode: 'failure', thresholdPercent: 0, reservePercent: 0 },
+          },
+        }),
+      },
+    }
+    apply(ctx, config)
+    ctx.credentials.store.set('MINIMAX_CN_API_KEY_POOL_1', 'value-a')
+    ctx.credentials.store.set('MINIMAX_CN_API_KEY_POOL_2', 'value-b')
+    ctx.credentials.store.set('MINIMAX_CN_API_KEY', 'value-a')
+
+    // The stream hook runs before the request is sent.
+    const stream = ctx.listeners.get('llm/stream')[0]
+    const upstream = (async function* upstream() { yield 'chunk' })()
+    const wrapped = await stream({ provider: 'minimax-cn' }, () => upstream)
+    for await (const chunk of wrapped) assert.equal(chunk, 'chunk')
+
+    // The route now authenticates with the healthy key — no error was
+    // needed to get there.
+    assert.equal(ctx.credentials.store.get('MINIMAX_CN_API_KEY'), 'value-b')
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
+test('the pool leaves a key that still has quota alone', async () => {
+  const ctx = makeContext()
+  const later = Date.now() + 3_600_000
+
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    async text() {
+      return JSON.stringify(quotaAnswer(later, later, 80, 80))
+    },
+  })
+
+  try {
+    const config = {
+      providers: {
+        get: () => ({
+          'minimax-cn': {
+            enabled: true,
+            rotate_on: [...DEFAULT_ROTATE_ON],
+            keys: [
+              { name: 'primary', ref: 'MINIMAX_CN_API_KEY_POOL_1', enabled: true },
+              { name: 'secondary', ref: 'MINIMAX_CN_API_KEY_POOL_2', enabled: true },
+            ],
+            policy: { mode: 'failure', thresholdPercent: 0, reservePercent: 0 },
+          },
+        }),
+      },
+    }
+    apply(ctx, config)
+    ctx.credentials.store.set('MINIMAX_CN_API_KEY_POOL_1', 'value-a')
+    ctx.credentials.store.set('MINIMAX_CN_API_KEY_POOL_2', 'value-b')
+    ctx.credentials.store.set('MINIMAX_CN_API_KEY', 'value-a')
+
+    const stream = ctx.listeners.get('llm/stream')[0]
+    const upstream = (async function* upstream() { yield 'chunk' })()
+    const wrapped = await stream({ provider: 'minimax-cn' }, () => upstream)
+    for await (const chunk of wrapped) assert.equal(chunk, 'chunk')
+
+    // The key in use still has quota, so it stays in use.
+    assert.equal(ctx.credentials.store.get('MINIMAX_CN_API_KEY'), 'value-a')
+  } finally {
+    globalThis.fetch = originalFetch
+  }
 })
 
 // ---------------------------------------------------------------------------

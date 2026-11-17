@@ -106,8 +106,8 @@
 import { randomUUID } from 'node:crypto'
 import z from '@deepseek-ai/schemastery'
 import {
-  applyReserve, clampPercent, credentialRef, envRefOf, fetchRemains, overallRemainingPercent,
-  intervalRemainingPercent, intervalResetAt, isResting, isSupportedProvider, poolEntrySchema,
+  applyReserve, clampPercent, credentialRef, dropExhausted, envRefOf, fetchRemains, overallRemainingPercent,
+  intervalRemainingPercent, intervalResetAt, isExhausted, isResting, isSupportedProvider, poolEntrySchema,
   policySchema, quotaSummaryOf, regionOfProvider, pickNextKey, rankByResetOrder, selectKey,
   weeklyRemainingPercent, weeklyResetAt, QUOTA_TTL_MS,
 } from './src/pool.js'
@@ -693,13 +693,16 @@ export function apply(ctx, config) {
       state.currentValue = await resolveRef(envRefOf(provider))
     }
     // The same resting rule the failure path uses: a key below the
-    // threshold is skipped while another key is available.
+    // threshold is skipped while another key is available. A key with
+    // nothing left in either window is skipped outright — the activation
+    // must not hand the route a key that can only fail.
+    const alive = dropExhausted(ranked)
     const resting = new Set()
-    for (const candidate of ranked) {
+    for (const candidate of alive) {
       if (isResting(candidate.quota, profile.policy.thresholdPercent)) resting.add(candidate.ref)
     }
-    const available = ranked.filter((candidate) => !resting.has(candidate.ref))
-    const usable = available.length > 0 ? available : ranked
+    const available = alive.filter((candidate) => !resting.has(candidate.ref))
+    const usable = available.length > 0 ? available : alive
     // The reset order decides: the key whose week rolls over soonest, and
     // among those the one whose 5-hour window resets soonest. When no quota
     // is known yet the pool is searched in its own order, and the key already
@@ -886,6 +889,80 @@ export function apply(ctx, config) {
   }
 
   const lifetime = new AbortController()
+
+  /**
+   * Move off a key that has nothing left, before the request goes out.
+   *
+   * This is the check the user asked for: a key whose 5-hour window or whose
+   * weekly window is at zero must not be handed to a request, because the
+   * request can only fail. The check is made BEFORE the request, so the pool
+   * moves on its own instead of waiting for the provider to report an error.
+   *
+   * It runs in `failure` mode too, and it is deliberately narrow: the pool is
+   * not re-ranked and the reset order is not consulted. The only thing that
+   * changes is a key that cannot serve the request — the pool stays where it
+   * is otherwise, which is what `failure` mode promises.
+   *
+   * The current key is matched by its VALUE, because the route's own
+   * reference holds a copy of one pool slot's value and never equals a
+   * candidate's slot reference.
+   * @param provider - provider route id.
+   * @returns true when a key was written.
+   */
+  const evictExhaustedKey = async (provider) => {
+    const all = profiles()
+    if (all[provider] === undefined) return false
+    const profile = profileOf(all, provider)
+    if (!profile.enabled) return false
+    const pool = await candidatesWithValues(provider, profile)
+    if (pool.length === 0) return false
+    // The quotas are probed first, because the check is made against the
+    // remaining share and that only the quota answer carries. A probe that
+    // fails leaves every key's quota unknown, and an unknown quota is not an
+    // exhausted one — so the check is skipped rather than guessed.
+    try {
+      await probeQuotas(provider)
+    } catch (error) {
+      console.error('[llm-key-pool] the pool quota could not be probed for provider "%s"; the current key is left alone', provider)
+      console.error(error)
+      return false
+    }
+    const state = stateOf(provider)
+    if (state.currentValue === undefined) {
+      state.currentValue = await resolveRef(envRefOf(provider))
+    }
+    const current = state.currentValue
+    if (current === undefined) return false
+    // The key in use is found by its value, and only that key is examined:
+    // the other keys are the pool's business, not this check's.
+    const inUse = pool.find((candidate) => candidate.value === current)
+    if (inUse === undefined) return false
+    if (!isExhausted(inUse.quota)) return false
+    // The key is empty. The next key is the one the pool would pick anyway,
+    // with the empty key left out of the search.
+    const alive = dropExhausted(pool)
+    const next = pickNextKey({
+      policy: profile.policy,
+      candidates: alive,
+      currentValue: current,
+      pinnedRef: profile.pinned_ref,
+      now: Date.now(),
+    })
+    if (next === undefined) return false
+    if (next.value === current) return false
+    const remaining = overallRemainingPercent(next.quota)
+    const written = await writeKey(provider, next.value, `exhausted ${String(Math.round(remaining ?? 0))}%`)
+    if (written) {
+      console.log(
+        '[llm-key-pool] evicted an exhausted key for provider="%s" key→"%s" (%s)',
+        provider,
+        next.name === '' ? next.ref : next.name,
+        remaining === undefined ? 'quota unknown' : `${String(Math.round(remaining))}%`,
+      )
+    }
+    return written
+  }
+
   /**
    * Probe the pool's quota and, when the policy asks for it, move to the
    * soonest-resetting key before the request goes out.
@@ -921,11 +998,13 @@ export function apply(ctx, config) {
     const provider = options?.provider
     if (typeof provider !== 'string') return next()
     let active = false
+    let mode = 'failure'
     try {
       const all = profiles()
       if (all[provider] === undefined) return next()
       const profile = profileOf(all, provider)
-      active = profile.enabled && profile.policy.mode === 'remaining'
+      active = profile.enabled
+      mode = profile.policy.mode
     } catch (error) {
       console.error('[llm-key-pool] the provider profile could not be read for "%s"; the request continues unchanged', provider)
       console.error(error)
@@ -942,7 +1021,11 @@ export function apply(ctx, config) {
     }
     return (async function* wrapped() {
       try {
-        await beforeRequest(provider)
+        // In `remaining` mode the whole policy runs before the request. In
+        // `failure` mode only the exhausted key is evicted — the pool is not
+        // re-ranked, the current key simply may not be one that is empty.
+        if (mode === 'remaining') await beforeRequest(provider)
+        else await evictExhaustedKey(provider)
       } catch (error) {
         console.error('[llm-key-pool] could not apply the remaining policy for provider "%s"', provider)
         console.error(error)
